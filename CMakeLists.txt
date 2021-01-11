@@ -1,0 +1,85 @@
+cmake_minimum_required(VERSION 3.15)
+project(PSPXLinkBridge)
+
+set(CMAKE_MODULE_PATH
+  "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
+  "${CMAKE_MODULE_PATH}"
+)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+option(BUILD_DOC "Build doxygen" OFF)
+option(ENABLE_TESTS "Build unittests" OFF)
+
+include_directories(Sources)
+include_directories(Tests)
+
+# Check if Doxygen is installed
+find_package(Doxygen)
+if (BUILD_DOC AND DOXYGEN_FOUND)
+    # Set input and output files
+    set(DOXYGEN_IN ${CMAKE_CURRENT_SOURCE_DIR}/Docs/Doxyfile.in)
+    set(DOXYGEN_OUT ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile)
+
+    # Request to configure the file
+    configure_file(${DOXYGEN_IN} ${DOXYGEN_OUT} @ONLY)
+    message("Doxygen build started")
+
+    add_custom_target(doc_doxygen ALL
+            COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN_OUT}
+            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+            COMMENT "Generating API documentation with Doxygen"
+            VERBATIM)
+else (DOXYGEN_FOUND)
+    message("Doxygen need to be installed to generate the doxygen documentation")
+endif (BUILD_DOC AND DOXYGEN_FOUND)
+
+# Windows specific options
+if (MSVC OR MSYS OR MINGW)
+    message("You're running Windows! Make sure your paths are set correctly.")
+
+    if (MSYS OR MINGW)
+        # Add WinSock to the platform specific libraries, MINGW needs it.
+        string(APPEND PLATFORM_SPECIFIC_LIBRARIES "ws2_32")
+    
+        # Needed because otherwise the libraries cannot be found.
+        set(Boost_ARCHITECTURE "-x64")
+    endif ()
+    
+    set(BOOST_ROOT "c:/Program Files/boost_1_74_0/output/")
+
+    # Magic that boost on windows seems to need.
+    add_definitions( -DBOOST_ALL_NO_LIB )
+    add_definitions( -DBOOST_ALL_DYN_LINK )
+
+    # The logger module uses ERROR in an enum class, GDI also uses this, but screw GDI
+    # We have no GUI anyway!
+    add_definitions( -DNOGDI )
+else ()
+    find_package(Curses)
+endif ()
+
+# Concepts seems to break on a bunch of compilers, see: https://github.com/boostorg/asio/issues/312
+add_definitions(-DBOOST_ASIO_DISABLE_CONCEPTS)
+
+find_package(LibUSB REQUIRED)
+find_package(Threads REQUIRED)
+find_package(Boost 1.71 REQUIRED COMPONENTS thread system program_options)
+
+# TODO: Make this search for source files automatically, this is very ugly!
+add_executable(PSPXLinkBridge main.cpp
+        Sources/Logger.cpp
+        Sources/SettingsModel.cpp
+        Sources/XLinkKaiConnection.cpp
+        Sources/USBReader.cpp
+        Includes/Logger.h
+        Includes/NetworkingHeaders.h
+        Includes/XLinkKaiConnection.h
+        Includes/NetConversionFunctions.h
+        Includes/SettingsModel.h
+        Includes/USBReader.h
+        ${EXTRA_INCLUDES})
+
+target_include_directories(PSPXLinkBridge PRIVATE ${LibUSB_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS})
+target_link_libraries(PSPXLinkBridge ${Boost_LIBRARIES} ${LibUSB_LIBRARIES} ${PLATFORM_SPECIFIC_LIBRARIES})

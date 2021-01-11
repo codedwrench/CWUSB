@@ -10,6 +10,8 @@
 
 #include <boost/asio.hpp>
 #include <boost/thread.hpp>
+
+#include "USBReader.h"
 namespace XLinkKai_Constants
 {
     static constexpr int                  cMaxLength{4096};
@@ -99,7 +101,7 @@ public:
      */
     void SetPort(unsigned int aPort);
 
-    void SetIncomingConnection(std::shared_ptr<void> aDevice);
+    void SetIncomingConnection(std::shared_ptr<USBReader> aDevice);
 
 private:
     /**
@@ -120,7 +122,7 @@ private:
     std::array<char, cMaxLength> mData{};
     // Raw ethernet data received from XLink Kai
     std::string                    mEthernetData{};
-    std::shared_ptr<void>          mIncomingConnection{nullptr};
+    std::shared_ptr<USBReader>     mIncomingConnection{nullptr};
     std::string                    mIp{cIp};
     boost::asio::io_service        mIoService{};
     unsigned int                   mPort{cPort};

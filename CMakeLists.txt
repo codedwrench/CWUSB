@@ -73,6 +73,7 @@ add_executable(PSPXLinkBridge main.cpp
         Sources/SettingsModel.cpp
         Sources/XLinkKaiConnection.cpp
         Sources/USBReader.cpp
+        Includes/HostFS.h
         Includes/Logger.h
         Includes/NetworkingHeaders.h
         Includes/XLinkKaiConnection.h

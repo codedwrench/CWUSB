@@ -10,20 +10,21 @@
 #include <iostream>
 #include <string_view>
 
+#include <boost/thread.hpp>
+
 #include <libusb.h>
 
 constexpr int cMaxAsynchronousBuffer = 4096;
 
-
+class XLinkKaiConnection;
 class USBReader
 {
 public:
     /**
      * Opens the the USB device, so we can send/read data.
-     * @param aBusses - The usb busses.
      * @return true if successful.
      */
-    bool OpenDevice(libusb_device** aBusses);
+    bool OpenDevice();
 
     /**
      * Closes the device
@@ -49,7 +50,25 @@ public:
      */
     int USBBulkRead(int aEndpoint, int aSize, int aTimeOut);
 
+    bool StartReceiverThread();
+
+    /**
+     * Handles traffic from USB.
+     */
+    void ReceiveCallback();
+
+
+    void SetIncomingConnection(std::shared_ptr<XLinkKaiConnection> aDevice);
+
 private:
+    bool USBCheckDevice();
+    int  SendHello();
+
+    bool                                              mError{false};
+    int                                               mRetryCounter{0};
+    std::shared_ptr<boost::thread>                    mReceiverThread{nullptr};
+    std::shared_ptr<XLinkKaiConnection>               mIncomingConnection{nullptr};
     libusb_device_handle*                             mDeviceHandle = nullptr;
     std::array<unsigned char, cMaxAsynchronousBuffer> mBuffer{};
+    int                                               mLength{0};
 };

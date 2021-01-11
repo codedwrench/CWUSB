@@ -247,7 +247,7 @@ void XLinkKaiConnection::SetPort(unsigned int aPort)
     mPort = aPort;
 }
 
-void XLinkKaiConnection::SetIncomingConnection(std::shared_ptr<void> aDevice)
+void XLinkKaiConnection::SetIncomingConnection(std::shared_ptr<USBReader> aDevice)
 {
     mIncomingConnection = aDevice;
 }

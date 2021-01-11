@@ -12,6 +12,7 @@
 #include "Includes/Logger.h"
 #include "Includes/NetConversionFunctions.h"
 #include "Includes/SettingsModel.h"
+#include "Includes/USBReader.h"
 #include "Includes/XLinkKaiConnection.h"
 
 namespace
@@ -62,15 +63,18 @@ int main(int argc, char* argv[])
     mSettingsModel.LoadFromFile(lProgramPath + cConfigFileName.data());
 
     Logger::GetInstance().Init(mSettingsModel.mLogLevel, cLogToDisk, lProgramPath + cLogFileName.data());
+    Logger::GetInstance().SetLogToScreen(true);
 
     std::shared_ptr<XLinkKaiConnection> lXLinkKaiConnection{std::make_shared<XLinkKaiConnection>()};
+    std::shared_ptr<USBReader>          lUSBReaderConnection{std::make_shared<USBReader>()};
 
-    bool lSuccess = lXLinkKaiConnection->Open(mSettingsModel.mXLinkIp, std::stoi(mSettingsModel.mXLinkPort));
+    bool lSuccess{lXLinkKaiConnection->Open(mSettingsModel.mXLinkIp, std::stoi(mSettingsModel.mXLinkPort)) &&
+                  lUSBReaderConnection->OpenDevice()};
 
+    lUSBReaderConnection->SetIncomingConnection(lXLinkKaiConnection);
 
-    // Now set up the wifi interface
     if (lSuccess) {
-        if (lXLinkKaiConnection->StartReceiverThread()) {
+        if (lXLinkKaiConnection->StartReceiverThread() && lUSBReaderConnection->StartReceiverThread()) {
             mSettingsModel.mEngineStatus = SettingsModel_Constants::EngineStatus::Running;
             while (gRunning) {
                 std::this_thread::sleep_for(std::chrono::seconds(1));

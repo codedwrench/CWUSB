@@ -19,6 +19,8 @@
 
 #include <stdint.h>
 
+#include "USBReader.h"
+
 #ifdef __GNUC__
 #define PACK(__Declaration__) __Declaration__ __attribute__((__packed__))
 #endif
@@ -37,16 +39,15 @@
 
 namespace HostFS_Constants
 {
-    constexpr unsigned int cHostFSPathMax{4096};
-    constexpr unsigned int cHostFsMaxBlock{64 * 1024};
-    constexpr unsigned int cHostFsRenameBufSize{1024};
-    constexpr unsigned int cHostFsBulkMaxWrite{1024 * 1024};
-    constexpr unsigned int cDevCtlGetInfo{0x02425818};
+    constexpr unsigned int cMaxUSBPacketSize{512};
+
     constexpr unsigned int cAdhocRedirectorVersion{190};
-    constexpr unsigned int cAsyncCommandDebug{1};
-    constexpr unsigned int cAsyncCommandPacket{2};
+
+    constexpr unsigned int cAsyncModeDebug{1};
+    constexpr unsigned int cAsyncModePacket{2};
     constexpr unsigned int cAsyncCommandSendPacket{77};
     constexpr unsigned int cAsyncCommandPrintData{66};
+    constexpr unsigned int cAsyncUserChannel{4};
 
     enum eMagicType
     {
@@ -54,20 +55,6 @@ namespace HostFS_Constants
         Asynchronous = 0x782F0813,  //< Tells the PSP or PC what data gets send/received (Async)
         Bulk         = 0x782F0814,  //< Tells the PSP or PC what data gets send/received (Bulk)
         DebugPrint   = 0x909ACCEF   //< Tells the PSP or PC what data gets send/received (DebugPrint)
-    };
-
-    struct DevctlGetInfo
-    {
-        /* Total number of blocks */
-        unsigned int btotal;
-        /* Total number of free blocks */
-        unsigned int bfree;
-        /* Unknown */
-        unsigned int unk;
-        /* Sector size */
-        unsigned int ssize;
-        /* Number of sectors per block */
-        unsigned int sects;
     };
 
     enum HostFsCommands
@@ -109,7 +96,7 @@ namespace HostFS_Constants
         unsigned int value2;
     });
 
-    PACK(struct ScreenHeader {
+    PACK(struct AsyncSubHeader {
         unsigned int magic; /**< Magic number to tell the bridge program what to expect. */
         int          mode;  /* 0-3 */
         int          size;

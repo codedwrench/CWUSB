@@ -68,19 +68,22 @@ int main(int argc, char* argv[])
     std::shared_ptr<XLinkKaiConnection> lXLinkKaiConnection{std::make_shared<XLinkKaiConnection>()};
     std::shared_ptr<USBReader>          lUSBReaderConnection{std::make_shared<USBReader>()};
 
-    bool lSuccess{lXLinkKaiConnection->Open(mSettingsModel.mXLinkIp, std::stoi(mSettingsModel.mXLinkPort)) &&
-                  lUSBReaderConnection->OpenDevice()};
-
+    bool lSuccess{lXLinkKaiConnection->Open(mSettingsModel.mXLinkIp, std::stoi(mSettingsModel.mXLinkPort))};
     lUSBReaderConnection->SetIncomingConnection(lXLinkKaiConnection);
 
     if (lSuccess) {
-        if (lXLinkKaiConnection->StartReceiverThread() && lUSBReaderConnection->StartReceiverThread()) {
-            mSettingsModel.mEngineStatus = SettingsModel_Constants::EngineStatus::Running;
-            while (gRunning) {
-                std::this_thread::sleep_for(std::chrono::seconds(1));
+        if (lUSBReaderConnection->OpenDevice()) {
+            if (lXLinkKaiConnection->StartReceiverThread() && lUSBReaderConnection->StartReceiverThread()) {
+                mSettingsModel.mEngineStatus = SettingsModel_Constants::EngineStatus::Running;
+                while (gRunning) {
+                    std::this_thread::sleep_for(std::chrono::seconds(1));
+                }
+            } else {
+                Logger::GetInstance().Log("Failed to start receiver threads", Logger::Level::ERROR);
+                mSettingsModel.mEngineStatus = SettingsModel_Constants::EngineStatus::Error;
             }
         } else {
-            Logger::GetInstance().Log("Failed to start receiver threads", Logger::Level::ERROR);
+            Logger::GetInstance().Log("Failed to open connection to USB", Logger::Level::ERROR);
             mSettingsModel.mEngineStatus = SettingsModel_Constants::EngineStatus::Error;
         }
     } else {

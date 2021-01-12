@@ -8,13 +8,15 @@
 
 #include <array>
 #include <iostream>
+#include <mutex>
+#include <queue>
 #include <string_view>
 
 #include <boost/thread.hpp>
 
 #include <libusb.h>
 
-#include "../Includes/HostFS.h"
+#include "../Includes/USBConstants.h"
 
 constexpr int cMaxUSBBuffer = 512;
 
@@ -63,23 +65,30 @@ public:
 
     void SetIncomingConnection(std::shared_ptr<XLinkKaiConnection> aDevice);
 
+    void Send(std::string_view aData);
+
     bool StartReceiverThread();
+
 private:
     bool USBCheckDevice();
-    void HandleAsynchronous(HostFS_Constants::AsyncCommand& aData, int aLength);
-    void HandleAsynchronousData(HostFS_Constants::AsyncCommand& aData, int aLength);
-    void HandleStitch(HostFS_Constants::AsyncCommand& aData, int aLength);
+    void HandleAsynchronous(USB_Constants::AsyncCommand& aData, int aLength);
+    void HandleAsynchronousData(USB_Constants::AsyncCommand& aData, int aLength);
+    void HandleStitch(USB_Constants::AsyncCommand& aData, int aLength);
     int  SendHello();
 
-    bool                                     mStitching{false};  //< True: program starts stitching packets.
-    bool                                     mUSBCheckSuccessful{false};
-    bool                                     mError{false};
-    int                                      mRetryCounter{0};
-    std::shared_ptr<boost::thread>           mReceiverThread{nullptr};
-    std::shared_ptr<XLinkKaiConnection>      mIncomingConnection{nullptr};
-    libusb_device_handle*                    mDeviceHandle = nullptr;
-    std::array<char, cMaxUSBBuffer>          mBuffer{0};
-    std::array<char, cMaxAsynchronousBuffer> mAsyncBuffer{0};
-    unsigned int                             mBytesInAsyncBuffer{0};
-    int                                      mLength{0};
+    std::array<char, cMaxAsynchronousBuffer>             mAsyncReceiveBuffer{0};
+    std::queue<std::array<char, cMaxAsynchronousBuffer>> mAsyncSendBuffer{};
+    std::array<char, cMaxAsynchronousBuffer>             mPacketToSend{};
+    std::mutex                                           mAsyncSendBufferMutex{};  //< 2 threads are accessing this.
+    std::array<char, cMaxUSBBuffer>                      mBuffer{0};
+    unsigned int                                         mBytesInAsyncBuffer{0};
+    libusb_device_handle*                                mDeviceHandle{nullptr};
+    bool                                                 mError{false};
+    std::shared_ptr<XLinkKaiConnection>                  mIncomingConnection{nullptr};
+    int                                                  mLength{0};
+    std::shared_ptr<boost::thread>                       mReceiverThread{nullptr};
+    int                                                  mRetryCounter{0};
+    bool                                                 mStitching{false};  //< True: program starts stitching packets.
+    int  mActualPacketLength{0};  //< returned by PSP when receiving a netpacket.
+    bool mUSBCheckSuccessful{false};
 };

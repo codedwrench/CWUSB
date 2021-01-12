@@ -19,8 +19,6 @@
 
 #include <stdint.h>
 
-#include "USBReader.h"
-
 #ifdef __GNUC__
 #define PACK(__Declaration__) __Declaration__ __attribute__((__packed__))
 #endif
@@ -37,17 +35,9 @@
 #include <byteswap.h>  // bswap_16 bswap_32 bswap_64
 #endif
 
-namespace HostFS_Constants
+namespace USB_Constants
 {
-    constexpr unsigned int cMaxUSBPacketSize{512};
-
     constexpr unsigned int cAdhocRedirectorVersion{190};
-
-    constexpr unsigned int cAsyncModeDebug{1};
-    constexpr unsigned int cAsyncModePacket{2};
-    constexpr unsigned int cAsyncCommandSendPacket{77};
-    constexpr unsigned int cAsyncCommandPrintData{66};
-    constexpr unsigned int cAsyncUserChannel{4};
 
     enum eMagicType
     {
@@ -102,4 +92,18 @@ namespace HostFS_Constants
         int          size;
         int          ref;
     });
-}  // namespace HostFS_Constants
+
+    constexpr unsigned int cMaxUSBPacketSize{512};
+
+    constexpr unsigned int cAsyncHeaderSize{sizeof(AsyncCommand)};
+    constexpr unsigned int cAsyncSubHeaderSize{sizeof(AsyncSubHeader)};
+    constexpr unsigned int cAsyncHeaderAndSubHeaderSize{sizeof(AsyncCommand) + sizeof(AsyncSubHeader)};
+
+    constexpr unsigned int cAsyncModeDebug{1};
+    constexpr unsigned int cAsyncModePacket{2};
+    constexpr unsigned int cAsyncCommandSendPacket{77};
+    constexpr unsigned int cAsyncCommandPrintData{66};
+    constexpr unsigned int cAsyncUserChannel{4};
+
+    constexpr unsigned int cHostFSHeaderSize{sizeof(HostFsCommand)};
+}  // namespace USB_Constants

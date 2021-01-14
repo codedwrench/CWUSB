@@ -3,6 +3,7 @@
 /* Copyright (c) 2020 [Rick de Bondt] - XLinkKaiConnection.cpp */
 
 #include <cstring>
+#include <chrono>
 #include <iostream>
 #include <utility>
 
@@ -11,6 +12,7 @@
 
 
 using namespace boost::asio;
+using namespace std::chrono_literals;
 
 XLinkKaiConnection::~XLinkKaiConnection()
 {
@@ -205,6 +207,8 @@ bool XLinkKaiConnection::StartReceiverThread()
                         mConnected        = false;
                     } else {
                         mIoService.poll();
+                        // Very small delay to make the computer happy
+                        std::this_thread::sleep_for(10us);
                     }
                 }
             });

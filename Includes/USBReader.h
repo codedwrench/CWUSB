@@ -76,19 +76,26 @@ private:
     void HandleStitch(USB_Constants::AsyncCommand& aData, int aLength);
     int  SendHello();
 
-    std::array<char, cMaxAsynchronousBuffer>             mAsyncReceiveBuffer{0};
+    /** True: program starts stitching packets. **/
+    bool                                     mReceiveStitching{false};
+    std::array<char, cMaxAsynchronousBuffer> mAsyncReceiveBuffer{0};
+    unsigned int                             mBytesInAsyncBuffer{0};
+    std::array<char, cMaxUSBBuffer>          mTemporaryReceiveBuffer{0};
+
+    /** True: program starts stitching packets. **/
+    bool                                                 mSendStitching{false};
     std::queue<std::array<char, cMaxAsynchronousBuffer>> mAsyncSendBuffer{};
-    std::array<char, cMaxAsynchronousBuffer>             mPacketToSend{};
     std::mutex                                           mAsyncSendBufferMutex{};  //< 2 threads are accessing this.
-    std::array<char, cMaxUSBBuffer>                      mBuffer{0};
-    unsigned int                                         mBytesInAsyncBuffer{0};
-    libusb_device_handle*                                mDeviceHandle{nullptr};
-    bool                                                 mError{false};
-    std::shared_ptr<XLinkKaiConnection>                  mIncomingConnection{nullptr};
-    int                                                  mLength{0};
-    std::shared_ptr<boost::thread>                       mReceiverThread{nullptr};
-    int                                                  mRetryCounter{0};
-    bool                                                 mStitching{false};  //< True: program starts stitching packets.
+    std::array<char, cMaxAsynchronousBuffer>             mPacketToSend{};
+    unsigned int                                         mBytesSent{0};
+
+    libusb_device_handle*               mDeviceHandle{nullptr};
+    bool                                mError{false};
+    std::shared_ptr<XLinkKaiConnection> mIncomingConnection{nullptr};
+    int                                 mLength{0};
+    std::shared_ptr<boost::thread>      mReceiverThread{nullptr};
+    int                                 mRetryCounter{0};
+
     int  mActualPacketLength{0};  //< returned by PSP when receiving a netpacket.
     bool mUSBCheckSuccessful{false};
 };

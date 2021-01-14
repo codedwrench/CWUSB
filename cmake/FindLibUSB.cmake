@@ -11,15 +11,36 @@ FIND_PATH(LIBUSB_INCLUDE_DIR NAMES libusb.h
    /usr
    /usr/local
    /opt
-   PATH_SUFFIXES libusb-1.0
+   "${LIBUSB_DEPENDS_DIR}/"
+   PATH_SUFFIXES 
+    libusb-1.0
+    include
+    libusb
+    include/libusb-1.0
    )
 
-FIND_LIBRARY(LIBUSB_LIBRARIES NAMES usb-1.0
+FIND_LIBRARY(LIBUSB_LIBRARIES NAMES 
+   usb-1.0
+   libusb-1.0
    HINTS
    /usr
    /usr/local
    /opt
+   "${LIBUSB_DEPENDS_DIR}/"
+   PATH_SUFFIXES
+    /MS64/dll
    )
+
+IF(WIN32)
+    FIND_FILE(LibUSB_DLL
+        libusb-1.0.dll
+    PATHS
+        "${LIBUSB_DEPENDS_DIR}/"
+    PATH_SUFFIXES
+        MS64/dll
+)
+ENDIF()
+
 
 INCLUDE(FindPackageHandleStandardArgs)
 FIND_PACKAGE_HANDLE_STANDARD_ARGS(LibUSB DEFAULT_MSG LIBUSB_LIBRARIES LIBUSB_INCLUDE_DIR)

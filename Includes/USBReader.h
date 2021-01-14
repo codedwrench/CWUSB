@@ -5,7 +5,6 @@
  * This file contains the header for a USBReader class which will be used to read/write data from/to the PSP.
  *
  * */
-
 #include <array>
 #include <iostream>
 #include <mutex>
@@ -14,8 +13,6 @@
 
 #include <boost/thread.hpp>
 
-#include <libusb.h>
-
 #include "../Includes/USBConstants.h"
 
 constexpr int cMaxUSBBuffer = 512;
@@ -23,6 +20,7 @@ constexpr int cMaxUSBBuffer = 512;
 // The maximum 802.11 MTU is 2304 bytes. 802.11-2012, page 413, section 8.3.2.1
 constexpr int cMaxAsynchronousBuffer = 2304;
 
+struct libusb_device_handle;
 class XLinkKaiConnection;
 
 class USBReader

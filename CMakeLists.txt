@@ -50,14 +50,14 @@ if (MSVC OR MSYS OR MINGW)
     set(BOOST_ROOT "c:/Program Files/boost_1_74_0/output/")
 
     # Magic that boost on windows seems to need.
+    add_definitions( -DWIN32_LEAN_AND_MEAN )
     add_definitions( -DBOOST_ALL_NO_LIB )
     add_definitions( -DBOOST_ALL_DYN_LINK )
 
     # The logger module uses ERROR in an enum class, GDI also uses this, but screw GDI
     # We have no GUI anyway!
     add_definitions( -DNOGDI )
-else ()
-    find_package(Curses)
+    set(LIBUSB_DEPENDS_DIR "C:/libusb")
 endif ()
 
 # Concepts seems to break on a bunch of compilers, see: https://github.com/boostorg/asio/issues/312
@@ -87,5 +87,5 @@ add_executable(PSPXLinkBridge main.cpp
         Includes/USBReader.h
         ${EXTRA_INCLUDES})
 
-target_include_directories(PSPXLinkBridge PRIVATE ${LibUSB_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS})
-target_link_libraries(PSPXLinkBridge ${Boost_LIBRARIES} ${LibUSB_LIBRARIES} ${PLATFORM_SPECIFIC_LIBRARIES})
+target_include_directories(PSPXLinkBridge PRIVATE ${LIBUSB_INCLUDE_DIR} ${Boost_INCLUDE_DIRS})
+target_link_libraries(PSPXLinkBridge ${Boost_LIBRARIES} ${LIBUSB_LIBRARIES} ${PLATFORM_SPECIFIC_LIBRARIES})

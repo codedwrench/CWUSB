@@ -10,10 +10,11 @@
 #include <thread>
 #include <vector>
 
+// Not needed for this file but xlinkconnection needs it and this solves an ordering issue on windows
+#include <boost/asio.hpp>
 #include <sys/types.h>
 
 #include <libusb.h>
-#include <unistd.h>
 
 #include "../Includes/Logger.h"
 #include "../Includes/NetConversionFunctions.h"
@@ -200,7 +201,9 @@ bool USBReader::OpenDevice()
             if (lReturn >= 0) {
                 if ((lDescriptor.idVendor == cPSPVID) && (lDescriptor.idProduct == cPSPPID)) {
                     lReturn = libusb_open(lDevice, &lDeviceHandle);
+                    libusb_free_device_list(lDevices, 1);
                     if (lReturn >= 0 && lDeviceHandle != nullptr) {
+                        libusb_set_auto_detach_kernel_driver(lDeviceHandle, 1);
                         lReturn = libusb_set_configuration(lDeviceHandle, 1);
 
                         if (lReturn >= 0) {
@@ -209,18 +212,18 @@ bool USBReader::OpenDevice()
                                 mDeviceHandle = lDeviceHandle;
                             } else {
                                 Logger::GetInstance().Log(
-                                    std::string("Could not detach kernel driver: ") + libusb_strerror(lReturn),
+                                    std::string("Could not detach kernel driver: ") + libusb_strerror(static_cast<libusb_error>(lReturn)),
                                     Logger::Level::ERROR);
                                 libusb_close(lDeviceHandle);
                             }
                         } else {
                             Logger::GetInstance().Log(
-                                std::string("Could set configuration: ") + libusb_strerror(lReturn),
+                                std::string("Could set configuration: ") + libusb_strerror(static_cast<libusb_error>(lReturn)),
                                 Logger::Level::ERROR);
                             libusb_close(lDeviceHandle);
                         }
                     } else {
-                        Logger::GetInstance().Log(std::string("Could not open USB device") + libusb_strerror(lReturn),
+                        Logger::GetInstance().Log(std::string("Could not open USB device") + libusb_strerror(static_cast<libusb_error>(lReturn)),
                                                   Logger::Level::ERROR);
                     }
                 } else {
@@ -231,13 +234,13 @@ bool USBReader::OpenDevice()
                                               Logger::Level::TRACE);
                 }
             } else {
-                Logger::GetInstance().Log(std::string("Cannot query device descriptor") + libusb_strerror(lReturn),
+                Logger::GetInstance().Log(std::string("Cannot query device descriptor") + libusb_strerror(static_cast<libusb_error>(lReturn)),
                                           Logger::Level::ERROR);
                 libusb_free_device_list(lDevices, 1);
             }
         }
     } else {
-        Logger::GetInstance().Log(std::string("Could not get device list: ") + libusb_strerror(lReturn),
+        Logger::GetInstance().Log(std::string("Could not get device list: ") + libusb_strerror(static_cast<libusb_error>(lReturn)),
                                   Logger::Level::ERROR);
     }
 
@@ -294,7 +297,7 @@ int USBReader::USBBulkWrite(int aEndpoint, std::string_view aData, int aSize, in
         std::vector<unsigned char> lString{aData.data(), aData.data() + aSize};
         int lError = libusb_bulk_transfer(mDeviceHandle, aEndpoint, lString.data(), aSize, &lReturn, aTimeOut);
         if (lError < 0) {
-            Logger::GetInstance().Log(std::string("Error during Bulk write: ") + libusb_strerror(mError),
+            Logger::GetInstance().Log(std::string("Error during Bulk write: ") + libusb_strerror(static_cast<libusb_error>(mError)),
                                       Logger::Level::ERROR);
             lReturn = -1;
         }

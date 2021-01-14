@@ -4,6 +4,8 @@
  *
  **/
 
+
+// Also see: https://github.com/173210/psplink/blob/master/usbhostfs/usbhostfs.h
 /*
  * PSPLINK
  * -----------------------------------------------------------------------

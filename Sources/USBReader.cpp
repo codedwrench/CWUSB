@@ -429,7 +429,6 @@ bool USBReader::StartReceiverThread()
                     }
 
                     if (!mReceiveStitching) {
-                        mAsyncSendBufferMutex.lock();
                         if (mError) {
                             // Clear the send buffer when an error occured because the buffer will fill up quickly and
                             // the data is probably no longer relevant

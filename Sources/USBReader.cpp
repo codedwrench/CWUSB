@@ -288,7 +288,7 @@ int USBReader::USBBulkWrite(int aEndpoint, std::string_view aData, int aSize, in
     if (mDeviceHandle != nullptr) {
         Logger::GetInstance().Log(
             std::string("Bulk Write, size: ") + std::to_string(aSize) + " , timeout: " + std::to_string(aTimeOut),
-            Logger::Level::ERROR);
+            Logger::Level::TRACE);
 
         // Copy to a vector temporarily so we have a non-const unsigned char array
         std::vector<unsigned char> lString{aData.data(), aData.data() + aSize};

@@ -67,6 +67,9 @@ find_package(LibUSB REQUIRED)
 find_package(Threads REQUIRED)
 find_package(Boost 1.71 REQUIRED COMPONENTS thread system program_options)
 
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/PSPLinkBSD.txt
+     DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+
 # TODO: Make this search for source files automatically, this is very ugly!
 add_executable(PSPXLinkBridge main.cpp
         Sources/Logger.cpp

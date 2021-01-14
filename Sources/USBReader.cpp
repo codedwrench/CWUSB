@@ -487,7 +487,10 @@ bool USBReader::StartReceiverThread()
                                     mSendStitching = false;
                                     lPacketSize = mPacketToSend.size() - mBytesSent;
                                 }
-                                USBBulkWrite(0x3, lPacket, lPacketSize, 1000);
+                                if(USBBulkWrite(0x3, lPacket, lPacketSize, 1000) == -1)
+                                {
+                                    mError = true;
+                                }
                             }
                         }
                     }

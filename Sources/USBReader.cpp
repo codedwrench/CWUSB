@@ -211,19 +211,20 @@ bool USBReader::OpenDevice()
                             if (lReturn == 0) {
                                 mDeviceHandle = lDeviceHandle;
                             } else {
-                                Logger::GetInstance().Log(
-                                    std::string("Could not detach kernel driver: ") + libusb_strerror(static_cast<libusb_error>(lReturn)),
-                                    Logger::Level::ERROR);
+                                Logger::GetInstance().Log(std::string("Could not detach kernel driver: ") +
+                                                              libusb_strerror(static_cast<libusb_error>(lReturn)),
+                                                          Logger::Level::ERROR);
                                 libusb_close(lDeviceHandle);
                             }
                         } else {
-                            Logger::GetInstance().Log(
-                                std::string("Could set configuration: ") + libusb_strerror(static_cast<libusb_error>(lReturn)),
-                                Logger::Level::ERROR);
+                            Logger::GetInstance().Log(std::string("Could set configuration: ") +
+                                                          libusb_strerror(static_cast<libusb_error>(lReturn)),
+                                                      Logger::Level::ERROR);
                             libusb_close(lDeviceHandle);
                         }
                     } else {
-                        Logger::GetInstance().Log(std::string("Could not open USB device") + libusb_strerror(static_cast<libusb_error>(lReturn)),
+                        Logger::GetInstance().Log(std::string("Could not open USB device") +
+                                                      libusb_strerror(static_cast<libusb_error>(lReturn)),
                                                   Logger::Level::ERROR);
                     }
                 } else {
@@ -234,14 +235,16 @@ bool USBReader::OpenDevice()
                                               Logger::Level::TRACE);
                 }
             } else {
-                Logger::GetInstance().Log(std::string("Cannot query device descriptor") + libusb_strerror(static_cast<libusb_error>(lReturn)),
-                                          Logger::Level::ERROR);
+                Logger::GetInstance().Log(
+                    std::string("Cannot query device descriptor") + libusb_strerror(static_cast<libusb_error>(lReturn)),
+                    Logger::Level::ERROR);
                 libusb_free_device_list(lDevices, 1);
             }
         }
     } else {
-        Logger::GetInstance().Log(std::string("Could not get device list: ") + libusb_strerror(static_cast<libusb_error>(lReturn)),
-                                  Logger::Level::ERROR);
+        Logger::GetInstance().Log(
+            std::string("Could not get device list: ") + libusb_strerror(static_cast<libusb_error>(lReturn)),
+            Logger::Level::ERROR);
     }
 
     return (mDeviceHandle != nullptr);
@@ -297,8 +300,9 @@ int USBReader::USBBulkWrite(int aEndpoint, std::string_view aData, int aSize, in
         std::vector<unsigned char> lString{aData.data(), aData.data() + aSize};
         int lError = libusb_bulk_transfer(mDeviceHandle, aEndpoint, lString.data(), aSize, &lReturn, aTimeOut);
         if (lError < 0) {
-            Logger::GetInstance().Log(std::string("Error during Bulk write: ") + libusb_strerror(static_cast<libusb_error>(mError)),
-                                      Logger::Level::ERROR);
+            Logger::GetInstance().Log(
+                std::string("Error during Bulk write: ") + libusb_strerror(static_cast<libusb_error>(mError)),
+                Logger::Level::ERROR);
             lReturn = -1;
         }
     }
@@ -390,21 +394,21 @@ bool USBReader::StartReceiverThread()
                         CloseDevice();
                         OpenDevice();
                         mRetryCounter++;
-                        
+
                         mError              = false;
                         mUSBCheckSuccessful = false;
 
                         mReceiveStitching = false;
-                        mSendStitching = false;
+                        mSendStitching    = false;
 
                         mAsyncSendBufferMutex.lock();
-                        std::queue<std::array<char, cMaxAsynchronousBuffer>>().swap(mAsyncSendBuffer);  
+                        std::queue<std::array<char, cMaxAsynchronousBuffer>>().swap(mAsyncSendBuffer);
                         mAsyncSendBufferMutex.unlock();
 
-                        std::array<char, cMaxAsynchronousBuffer>().swap(mPacketToSend);  
-                        mBytesSent = 0;
+                        std::array<char, cMaxAsynchronousBuffer>().swap(mPacketToSend);
+                        mBytesSent          = 0;
                         mBytesInAsyncBuffer = 0;
-                        
+
                         Logger::GetInstance().Log("Ran into a snag, restarting stack!", Logger::Level::WARNING);
                         std::this_thread::sleep_for(100ms);
                     } else if (mRetryCounter >= cMaxRetries) {
@@ -487,10 +491,9 @@ bool USBReader::StartReceiverThread()
                                     lPacketSize = cMaxUSBBuffer;
                                 } else {
                                     mSendStitching = false;
-                                    lPacketSize = mPacketToSend.size() - mBytesSent;
+                                    lPacketSize    = mPacketToSend.size() - mBytesSent;
                                 }
-                                if(USBBulkWrite(0x3, lPacket, lPacketSize, 1000) == -1)
-                                {
+                                if (USBBulkWrite(0x3, lPacket, lPacketSize, 1000) == -1) {
                                     mError = true;
                                 }
                             }

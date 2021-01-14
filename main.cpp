@@ -62,6 +62,8 @@ int main(int argc, char* argv[])
     SettingsModel mSettingsModel{};
     mSettingsModel.LoadFromFile(lProgramPath + cConfigFileName.data());
 
+    Logger::GetInstance().Log("PSPXLinkBridge, by CodedWrench", Logger::Level::INFO);
+
     Logger::GetInstance().Init(mSettingsModel.mLogLevel, cLogToDisk, lProgramPath + cLogFileName.data());
     Logger::GetInstance().SetLogToScreen(true);
 

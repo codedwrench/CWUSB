@@ -1,4 +1,4 @@
-LogLevel: "Warning"
+LogLevel: "Info"
 XLinkIp: "127.0.0.1"
 XLinkPort: "34523"
 

@@ -28,7 +28,7 @@ namespace
 {
     constexpr unsigned int cPSPVID{0x54C};
     constexpr unsigned int cPSPPID{0x1C9};
-    constexpr unsigned int cMaxRetries{1000};
+    constexpr unsigned int cMaxRetries{50};
     constexpr unsigned int cMaxSendBufferItems{100};
 
 
@@ -530,5 +530,13 @@ void USBReader::Send(std::string_view aData)
         Logger::GetInstance().Log(
             "Sendbuffer got above 20 packets, some latency expected: " + std::to_string(mAsyncSendBuffer.size()),
             Logger::Level::WARNING);
+    }
+}
+
+USBReader::~USBReader()
+{
+    if(mDeviceHandle != nullptr)
+    {
+        CloseDevice();
     }
 }

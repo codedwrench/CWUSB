@@ -26,6 +26,8 @@ class XLinkKaiConnection;
 class USBReader
 {
 public:
+    ~USBReader();
+    
     /**
      * Closes the device
      */

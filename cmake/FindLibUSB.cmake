@@ -51,7 +51,13 @@ FIND_LIBRARY(LIBUSB_LIBRARIES NAMES
    /opt
    "${LIBUSB_DEPENDS_DIR}/"
    PATH_SUFFIXES
+IF(MSYS OR MINGW)
+   # Do not use the ms64 dll for mingw
+	/MinGW64/dll
+ELSE()
     /MS64/dll
+ENDIF()
+
    )
 
 IF(WIN32)
@@ -60,7 +66,13 @@ IF(WIN32)
     PATHS
         "${LIBUSB_DEPENDS_DIR}/"
     PATH_SUFFIXES
-        MS64/dll
+IF(MSYS OR MINGW)
+   # Do not use the ms64 dll for mingw
+	/MinGW64/dll
+ELSE()
+    /MS64/dll
+ENDIF()
+
 )
 ENDIF()
 

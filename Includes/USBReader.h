@@ -20,6 +20,8 @@ constexpr int cMaxUSBBuffer = 512;
 // The maximum 802.11 MTU is 2304 bytes. 802.11-2012, page 413, section 8.3.2.1
 constexpr int cMaxAsynchronousBuffer = 2304;
 
+using ArrayWithLength = std::pair<std::array<char, cMaxAsynchronousBuffer>, int>;
+
 struct libusb_device_handle;
 class XLinkKaiConnection;
 
@@ -78,15 +80,14 @@ private:
 
     /** True: program starts stitching packets. **/
     bool                                     mReceiveStitching{false};
-    std::array<char, cMaxAsynchronousBuffer> mAsyncReceiveBuffer{0};
-    unsigned int                             mBytesInAsyncBuffer{0};
+    ArrayWithLength mAsyncReceiveBuffer{};
     std::array<char, cMaxUSBBuffer>          mTemporaryReceiveBuffer{0};
 
     /** True: program starts stitching packets. **/
     bool                                                 mSendStitching{false};
-    std::queue<std::array<char, cMaxAsynchronousBuffer>> mAsyncSendBuffer{};
+    std::queue<ArrayWithLength> mAsyncSendBuffer{};
     std::mutex                                           mAsyncSendBufferMutex{};  //< 2 threads are accessing this.
-    std::array<char, cMaxAsynchronousBuffer>             mPacketToSend{};
+    ArrayWithLength             mPacketToSend{};
     unsigned int                                         mBytesSent{0};
 
     libusb_device_handle*               mDeviceHandle{nullptr};

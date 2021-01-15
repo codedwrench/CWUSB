@@ -495,6 +495,8 @@ bool USBReader::StartReceiverThread()
                                     mSendStitching = false;
                                     lPacketSize    += mPacketToSend.size() - mBytesSent;
                                     lPacket.append(mPacketToSend.at(mBytesSent), mPacketToSend.at(mBytesSent + lPacketSize - 1));
+								    Logger::GetInstance().Log("Endstitch", Logger::Level::TRACE);
+
                                     std::array<char, cMaxAsynchronousBuffer>().swap(mPacketToSend);
                                 }
                                 if (USBBulkWrite(0x3, lPacket, lPacketSize, 1000) == -1) {

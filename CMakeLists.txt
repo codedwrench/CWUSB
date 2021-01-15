@@ -71,7 +71,7 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/PSPLinkBSD.txt
      DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/cnf/config.txt
      DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
-
+	
 # TODO: Make this search for source files automatically, this is very ugly!
 add_executable(PSPXLinkBridge main.cpp
         Sources/Logger.cpp
@@ -89,3 +89,7 @@ add_executable(PSPXLinkBridge main.cpp
 
 target_include_directories(PSPXLinkBridge PRIVATE ${LIBUSB_INCLUDE_DIR} ${Boost_INCLUDE_DIRS})
 target_link_libraries(PSPXLinkBridge ${Boost_LIBRARIES} ${LIBUSB_LIBRARIES} ${PLATFORM_SPECIFIC_LIBRARIES})
+
+if (MSYS OR MINGW)
+	target_compile_options(PSPXLinkBridge PRIVATE -static-libgcc -static-libstdc++)
+endif ()

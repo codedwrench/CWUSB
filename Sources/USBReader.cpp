@@ -166,7 +166,7 @@ void USBReader::HandleStitch(AsyncCommand& aData, int aLength)
             mBytesInAsyncBuffer += lLength - static_cast<int>(cAsyncHeaderSize);
 
             // If we are smaller than the max USB packet size, we are done and we can send the packet on its merry way
-            if (mBytesInAsyncBuffer == mActualPacketLength) {
+            if (mBytesInAsyncBuffer >= mActualPacketLength) {
                 // This can be sent to XLink Kai
                 mIncomingConnection->Send(std::string(mAsyncReceiveBuffer.data(), mBytesInAsyncBuffer));
                 mBytesInAsyncBuffer = 0;
@@ -486,12 +486,16 @@ bool USBReader::StartReceiverThread()
                                 if (mPacketToSend.size() - mBytesSent + lPacketSize > cMaxUSBBuffer) {
                                     Logger::GetInstance().Log("SendStitching", Logger::Level::TRACE);
                                     mSendStitching = true;
-                                    lPacket.append(mPacketToSend.at(mBytesSent), mPacketToSend.at(cMaxUSBBuffer));
-                                    mBytesSent += cMaxUSBBuffer;
+                                    // Start from bytes sent, then add the max usb buffer - header size
+                                    lPacket.append(mPacketToSend.at(mBytesSent), mPacketToSend.at(mBytesSent + cMaxUSBBuffer - lPacketSize - 1));
+                                    // We don't count the header size for bytes sent
+                                    mBytesSent += cMaxUSBBuffer - lPacketSize; 
                                     lPacketSize = cMaxUSBBuffer;
                                 } else {
                                     mSendStitching = false;
-                                    lPacketSize    = mPacketToSend.size() - mBytesSent;
+                                    lPacketSize    += mPacketToSend.size() - mBytesSent;
+                                    lPacket.append(mPacketToSend.at(mBytesSent), mPacketToSend.at(mBytesSent + lPacketSize - 1));
+                                    std::array<char, cMaxAsynchronousBuffer>().swap(mPacketToSend);
                                 }
                                 if (USBBulkWrite(0x3, lPacket, lPacketSize, 1000) == -1) {
                                     mError = true;
@@ -524,7 +528,7 @@ void USBReader::Send(std::string_view aData)
     }
     if (mAsyncSendBuffer.size() > 10) {
         Logger::GetInstance().Log(
-            "Sendbuffer got above 20 packets, some latency expected" + std::to_string(mAsyncSendBuffer.size()),
+            "Sendbuffer got above 20 packets, some latency expected: " + std::to_string(mAsyncSendBuffer.size()),
             Logger::Level::WARNING);
     }
 }

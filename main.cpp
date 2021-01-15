@@ -71,6 +71,7 @@ int main(int argc, char* argv[])
 
     bool lSuccess{lXLinkKaiConnection->Open(mSettingsModel.mXLinkIp, std::stoi(mSettingsModel.mXLinkPort))};
     lUSBReaderConnection->SetIncomingConnection(lXLinkKaiConnection);
+    lXLinkKaiConnection->SetIncomingConnection(lUSBReaderConnection);
 
     if (lSuccess) {
         if (lUSBReaderConnection->OpenDevice()) {

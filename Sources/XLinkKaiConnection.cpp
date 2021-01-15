@@ -165,7 +165,7 @@ void XLinkKaiConnection::ReceiveCallback(const boost::system::error_code& aError
                         // Strip e;e;
                         mEthernetData =
                             lData.substr(cEthernetDataString.length(), lData.length() - cEthernetDataString.length());
-                        // mIncomingConnection->Send(mEthernetData);
+                        mIncomingConnection->Send(mEthernetData);
                     }
                 }
             } else if (lCommand == std::string(cDisconnectedFormat) + cSeparator.data()) {

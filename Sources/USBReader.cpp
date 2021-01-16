@@ -169,11 +169,11 @@ void USBReader::HandleAsynchronousSend()
             AsyncSubHeader lSubHeader{};
             memset(&lSubHeader, 0, cAsyncSubHeaderSize);
             lSubHeader.magic = DebugPrint;
-            lSubHeader.mode  = cAsyncModePacket;
-            lSubHeader.ref   = cAsyncCommandSendPacket;
+            lSubHeader.mode  = 3;
+            lSubHeader.ref   = 0; // i don't know why this is 0
             lSubHeader.size  = mPacketToSend.second;
             Logger::GetInstance().Log("size = " + std::to_string(mPacketToSend.second), Logger::Level::TRACE);
-            memcpy(lPacket.data() + lPacketSize, &lSubHeader, cAsyncHeaderSize);
+            memcpy(lPacket.data() + lPacketSize, &lSubHeader, cAsyncSubHeaderSize);
             lPacketSize += cAsyncSubHeaderSize;
         }
 
@@ -200,7 +200,7 @@ void USBReader::HandleAsynchronousSend()
             ArrayWithLength().swap(mPacketToSend);
             mBytesSent = 0;
         }
-        if (USBBulkWrite(0x3, lPacket.data(), lPacketSize, 1000) == -1) {
+        if (USBBulkWrite(0x3, lPacket.data(), lPacketSize, 1) == -1) {
             mError = true;
         }
     }
@@ -503,7 +503,7 @@ bool USBReader::StartReceiverThread()
 
                     if (!mSendStitching) {
                         // First read, then write
-                        int lLength{USBBulkRead(0x81, 512, 1000)};
+                        int lLength{USBBulkRead(0x81, 512, 1)};
                         if (lLength > 0) {
                             mLength = lLength;
                             ReceiveCallback();

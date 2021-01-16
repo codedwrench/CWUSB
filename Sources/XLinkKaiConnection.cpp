@@ -94,6 +94,7 @@ bool XLinkKaiConnection::Send(std::string_view aCommand, std::string_view aData)
         }
     } else {
         Logger::GetInstance().Log("Could not send message on closed socket.", Logger::Level::DEBUG);
+        mConnected = false;
         lReturn = false;
     }
     return lReturn;
@@ -197,14 +198,17 @@ bool XLinkKaiConnection::StartReceiverThread()
                 while (!mIoService.stopped()) {
                     if ((!mConnected && !mConnectInitiated)) {
                         // Lost connection somewhere, reconnect.
+                        Close();
+                        Open(mIp, mPort);
                         Connect();
                         std::this_thread::sleep_for(std::chrono::seconds(1));
                     } else if ((!mConnected) && mConnectInitiated &&
                                (std::chrono::system_clock::now() > (mConnectionTimerStart + cConnectionTimeout))) {
                         Logger::GetInstance().Log("Timeout waiting for XLink Kai to connect", Logger::Level::ERROR);
-                        mIoService.stop();
                         mConnectInitiated = false;
                         mConnected        = false;
+                        // Retry in 10 seconds
+                        std::this_thread::sleep_for(10s);
                     } else {
                         mIoService.poll();
                         // Very small delay to make the computer happy

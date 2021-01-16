@@ -69,27 +69,26 @@ int main(int argc, char* argv[])
     std::shared_ptr<XLinkKaiConnection> lXLinkKaiConnection{std::make_shared<XLinkKaiConnection>()};
     std::shared_ptr<USBReader>          lUSBReaderConnection{std::make_shared<USBReader>()};
 
-    bool lSuccess{lXLinkKaiConnection->Open(mSettingsModel.mXLinkIp, std::stoi(mSettingsModel.mXLinkPort))};
+    bool lSuccess{false};
+
+    while (!lSuccess) {
+        lSuccess = lXLinkKaiConnection->Open(mSettingsModel.mXLinkIp, std::stoi(mSettingsModel.mXLinkPort));
+        lSuccess &= lUSBReaderConnection->OpenDevice();
+        if (!lSuccess) {
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+        }
+    }
+
     lUSBReaderConnection->SetIncomingConnection(lXLinkKaiConnection);
     lXLinkKaiConnection->SetIncomingConnection(lUSBReaderConnection);
 
-    if (lSuccess) {
-        if (lUSBReaderConnection->OpenDevice()) {
-            if (lXLinkKaiConnection->StartReceiverThread() && lUSBReaderConnection->StartReceiverThread()) {
-                mSettingsModel.mEngineStatus = SettingsModel_Constants::EngineStatus::Running;
-                while (gRunning) {
-                    std::this_thread::sleep_for(std::chrono::seconds(1));
-                }
-            } else {
-                Logger::GetInstance().Log("Failed to start receiver threads", Logger::Level::ERROR);
-                mSettingsModel.mEngineStatus = SettingsModel_Constants::EngineStatus::Error;
-            }
-        } else {
-            Logger::GetInstance().Log("Failed to open connection to USB", Logger::Level::ERROR);
-            mSettingsModel.mEngineStatus = SettingsModel_Constants::EngineStatus::Error;
+    if (lXLinkKaiConnection->StartReceiverThread() && lUSBReaderConnection->StartReceiverThread()) {
+        mSettingsModel.mEngineStatus = SettingsModel_Constants::EngineStatus::Running;
+        while (gRunning) {
+            std::this_thread::sleep_for(std::chrono::seconds(1));
         }
     } else {
-        Logger::GetInstance().Log("Failed to open connection to XLink Kai", Logger::Level::ERROR);
+        Logger::GetInstance().Log("Failed to start receiver threads", Logger::Level::ERROR);
         mSettingsModel.mEngineStatus = SettingsModel_Constants::EngineStatus::Error;
     }
 

@@ -29,7 +29,7 @@ class USBReader
 {
 public:
     ~USBReader();
-    
+
     /**
      * Closes the device
      */
@@ -79,16 +79,16 @@ private:
     int  SendHello();
 
     /** True: program starts stitching packets. **/
-    bool                                     mReceiveStitching{false};
-    ArrayWithLength mAsyncReceiveBuffer{};
-    std::array<char, cMaxUSBBuffer>          mTemporaryReceiveBuffer{0};
+    bool                            mReceiveStitching{false};
+    ArrayWithLength                 mAsyncReceiveBuffer{};
+    std::array<char, cMaxUSBBuffer> mTemporaryReceiveBuffer{0};
 
     /** True: program starts stitching packets. **/
-    bool                                                 mSendStitching{false};
+    bool                        mSendStitching{false};
     std::queue<ArrayWithLength> mAsyncSendBuffer{};
-    std::mutex                                           mAsyncSendBufferMutex{};  //< 2 threads are accessing this.
+    std::mutex                  mAsyncSendBufferMutex{};  //< 2 threads are accessing this.
     ArrayWithLength             mPacketToSend{};
-    unsigned int                                         mBytesSent{0};
+    unsigned int                mBytesSent{0};
 
     libusb_device_handle*               mDeviceHandle{nullptr};
     bool                                mError{false};

@@ -23,10 +23,11 @@ namespace XLinkKai_Constants
     static constexpr std::string_view     cDisconnectFormat{"disconnect"};
     static constexpr std::string_view     cDisconnectedFormat{"disconnected"};
     static constexpr std::string_view     cEthernetDataFormat{"e"};
-    static constexpr std::string_view     cLocallyUniqueName{"PSP"};
+    static constexpr std::string_view     cLocallyUniqueName{"USB_PSP"};
     static constexpr std::string_view     cEmulatorName{"USB_PSP"};
     static constexpr unsigned int         cPort{34523};
     static constexpr std::chrono::seconds cConnectionTimeout{10};
+    static constexpr std::chrono::seconds cKeepAliveTimeout{60};
 
     static const std::string cConnectString{std::string(cConnectFormat) + cSeparator.data() +
                                             cLocallyUniqueName.data() + cSeparator.data() + cEmulatorName.data() +
@@ -96,6 +97,12 @@ public:
     void Close();
 
     /**
+     * Closes the connection.
+     * @param aKillThread - set true if the receiver thread needs to be killed as well.
+     */
+    void Close(bool aKillThread);
+
+    /**
      * Sets port to XLink Kai interface.
      * @param aPort - Port to connect to.
      */
@@ -118,6 +125,7 @@ private:
     bool                                               mConnected{false};
     bool                                               mConnectInitiated{false};
     std::chrono::time_point<std::chrono::system_clock> mConnectionTimerStart{std::chrono::seconds{0}};
+    std::chrono::time_point<std::chrono::system_clock> mKeepAliveTimerStart{std::chrono::seconds{0}};
 
     std::array<char, cMaxLength> mData{};
     // Raw ethernet data received from XLink Kai

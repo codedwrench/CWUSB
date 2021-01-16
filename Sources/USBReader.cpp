@@ -37,6 +37,12 @@ namespace
 using namespace std::chrono_literals;
 using namespace USB_Constants;
 
+
+USBReader::USBReader()
+{
+    libusb_init(nullptr);
+}
+
 /**
  * Checks if command is a debugprint command with the given mode.
  * @param aData - Data to check.
@@ -64,14 +70,18 @@ static inline int IsDebugPrintCommand(AsyncCommand& aData, int aLength)
     return lReturn;
 }
 
-void USBReader::CloseDevice()
+void USBReader::Close()
 {
-    if (mDeviceHandle != nullptr) {
-        libusb_release_interface(mDeviceHandle, 0);
-        libusb_reset_device(mDeviceHandle);
-        libusb_close(mDeviceHandle);
-        mDeviceHandle = nullptr;
-        libusb_exit(nullptr);
+    // Close thread nicely
+    if (mReceiverThread != nullptr && !mReceiverThread->joinable()) {
+        mAwaitClose = true;
+        while (mAwaitClose) {
+            std::this_thread::sleep_for(1s);
+        }
+        mReceiverThread->join();
+        mReceiverThread = nullptr;
+    } else {
+        HandleClose();
     }
 }
 
@@ -137,6 +147,101 @@ void USBReader::HandleAsynchronousData(AsyncCommand& aData, int aLength)
     }
 }
 
+void USBReader::HandleAsynchronousSend()
+{
+    if (mPacketToSend.second != 0) {
+        size_t      lPacketSize{0};
+        std::array<char, cMaxUSBBuffer> lPacket{};
+
+        // First add the packet header
+        AsyncCommand lCommand{};
+        memset(&lCommand, 0, sizeof(lCommand));
+        lCommand.channel = cAsyncUserChannel;
+        lCommand.magic   = Asynchronous;
+
+        memcpy(lPacket.data() + lPacketSize, &lCommand, cAsyncHeaderSize);
+        lPacketSize += cAsyncHeaderSize;
+
+        // If we are not stitching we need to add a subheader
+        if (!mSendStitching) {
+            mBytesSent = 0;
+
+            AsyncSubHeader lSubHeader{};
+            memset(&lSubHeader, 0, cAsyncSubHeaderSize);
+            lSubHeader.magic = DebugPrint;
+            lSubHeader.mode  = cAsyncModePacket;
+            lSubHeader.ref   = cAsyncCommandSendPacket;
+            lSubHeader.size  = mPacketToSend.second;
+            Logger::GetInstance().Log("size = " + std::to_string(mPacketToSend.second), Logger::Level::TRACE);
+            memcpy(lPacket.data() + lPacketSize, &lSubHeader, cAsyncHeaderSize);
+            lPacketSize += cAsyncSubHeaderSize;
+        }
+
+        // Packet is too big, start stitching
+        if (mPacketToSend.second - mBytesSent + lPacketSize > cMaxUSBBuffer) {
+            Logger::GetInstance().Log("SendStitching", Logger::Level::TRACE);
+            mSendStitching = true;
+            // Start from bytes sent, then add the max usb buffer - header size
+            memcpy(lPacket.data() + lPacketSize, mPacketToSend.first.data() + mBytesSent, cMaxUSBBuffer - lPacketSize);
+            // We don't count the header size for bytes sent
+            mBytesSent += cMaxUSBBuffer - lPacketSize;
+            lPacketSize = cMaxUSBBuffer;
+        } else {
+            mSendStitching = false;
+
+            memcpy(lPacket.data() + lPacketSize,
+                   mPacketToSend.first.data() + mBytesSent,
+                   mPacketToSend.second - mBytesSent);
+            
+            lPacketSize += mPacketToSend.second - mBytesSent;
+
+            Logger::GetInstance().Log("Endstitch", Logger::Level::TRACE);
+
+            ArrayWithLength().swap(mPacketToSend);
+            mBytesSent = 0;
+        }
+        if (USBBulkWrite(0x3, lPacket.data(), lPacketSize, 1000) == -1) {
+            mError = true;
+        }
+    }
+}
+
+void USBReader::HandleClose()
+{
+    if (mDeviceHandle != nullptr) {
+        libusb_reset_device(mDeviceHandle);
+        libusb_release_interface(mDeviceHandle, 0);
+        libusb_attach_kernel_driver(mDeviceHandle, 0);
+        libusb_close(mDeviceHandle);
+        mDeviceHandle = nullptr;
+    }
+    mAwaitClose = false;
+}
+
+void USBReader::HandleError()
+{
+    // Do a full reset
+    HandleClose();
+    Open();
+    mRetryCounter++;
+
+    mError              = false;
+    mUSBCheckSuccessful = false;
+
+    mReceiveStitching = false;
+    mSendStitching    = false;
+
+    mAsyncSendBufferMutex.lock();
+    std::queue<ArrayWithLength>().swap(mAsyncSendBuffer);
+    mAsyncSendBufferMutex.unlock();
+
+    ArrayWithLength().swap(mPacketToSend);
+    mBytesSent = 0;
+
+    Logger::GetInstance().Log("Ran into a snag, restarting stack!", Logger::Level::WARNING);
+    std::this_thread::sleep_for(100ms);
+}
+
 void USBReader::HandleStitch(AsyncCommand& aData, int aLength)
 {
     int lLength{aLength};
@@ -180,15 +285,13 @@ void USBReader::HandleStitch(AsyncCommand& aData, int aLength)
     }
 }
 
-bool USBReader::OpenDevice()
+bool USBReader::Open()
 {
     libusb_device_handle* lDeviceHandle{nullptr};
     libusb_device**       lDevices{nullptr};
     libusb_device*        lDevice{nullptr};
     int                   lCount{0};
     int                   lReturn{0};
-
-    libusb_init(nullptr);
 
     lReturn = libusb_get_device_list(nullptr, &lDevices);
     if (lReturn >= 0) {
@@ -222,7 +325,7 @@ bool USBReader::OpenDevice()
                             libusb_close(lDeviceHandle);
                         }
                     } else {
-                        Logger::GetInstance().Log(std::string("Could not open USB device") +
+                        Logger::GetInstance().Log(std::string("Could not open USB device: ") +
                                                       libusb_strerror(static_cast<libusb_error>(lReturn)),
                                                   Logger::Level::ERROR);
                     }
@@ -234,9 +337,9 @@ bool USBReader::OpenDevice()
                                               Logger::Level::TRACE);
                 }
             } else {
-                Logger::GetInstance().Log(
-                    std::string("Cannot query device descriptor") + libusb_strerror(static_cast<libusb_error>(lReturn)),
-                    Logger::Level::ERROR);
+                Logger::GetInstance().Log(std::string("Cannot query device descriptor: ") +
+                                              libusb_strerror(static_cast<libusb_error>(lReturn)),
+                                          Logger::Level::ERROR);
                 libusb_free_device_list(lDevices, 1);
             }
         }
@@ -286,7 +389,7 @@ int USBReader::USBBulkRead(int aEndpoint, int aSize, int aTimeOut)
     return lReturn;
 }
 
-int USBReader::USBBulkWrite(int aEndpoint, std::string_view aData, int aSize, int aTimeOut)
+int USBReader::USBBulkWrite(int aEndpoint, char* aData, int aSize, int aTimeOut)
 {
     int lReturn{-1};
 
@@ -295,12 +398,9 @@ int USBReader::USBBulkWrite(int aEndpoint, std::string_view aData, int aSize, in
             std::string("Bulk Write, size: ") + std::to_string(aSize) + " , timeout: " + std::to_string(aTimeOut),
             Logger::Level::TRACE);
 
-        // Copy to a vector temporarily so we have a non-const unsigned char array
-        std::vector<unsigned char> lString{aData.data(), aData.data() + aSize};
-
-        Logger::GetInstance().Log(PrettyHexString(std::string(reinterpret_cast<char*>(&lString), aSize)),
+        Logger::GetInstance().Log(PrettyHexString(std::string(reinterpret_cast<char*>(aData), aSize)),
                                   Logger::Level::TRACE);
-        int lError = libusb_bulk_transfer(mDeviceHandle, aEndpoint, lString.data(), aSize, &lReturn, aTimeOut);
+        int lError = libusb_bulk_transfer(mDeviceHandle, aEndpoint, reinterpret_cast<unsigned char*>(aData), aSize, &lReturn, aTimeOut);
         if (lError < 0) {
             Logger::GetInstance().Log(
                 std::string("Error during Bulk write: ") + libusb_strerror(static_cast<libusb_error>(mError)),
@@ -382,39 +482,22 @@ bool USBReader::StartReceiverThread()
 {
     bool lReturn{true};
 
-    if (mDeviceHandle != nullptr) {
-        if (mReceiverThread == nullptr) {
-            mReceiverThread = std::make_shared<boost::thread>([&] {
-                // If we didn't get a graceful disconnect retry making connection.
-                while ((mDeviceHandle != nullptr) || mRetryCounter > 0) {
+    if (mDeviceHandle != nullptr && mReceiverThread == nullptr) {
+        mReceiverThread = std::make_shared<boost::thread>([&] {
+            // If we didn't get a graceful disconnect retry making connection.
+            while ((mDeviceHandle != nullptr) || mRetryCounter > 0) {
+                if (mAwaitClose) {
+                    HandleClose();
+                } else {
                     if (!mUSBCheckSuccessful) {
                         mUSBCheckSuccessful = USBCheckDevice();
                     }
 
                     if ((mError && mRetryCounter < cMaxRetries) || (!mUSBCheckSuccessful)) {
-                        // Do a full reset
-                        CloseDevice();
-                        OpenDevice();
-                        mRetryCounter++;
-
-                        mError              = false;
-                        mUSBCheckSuccessful = false;
-
-                        mReceiveStitching = false;
-                        mSendStitching    = false;
-
-                        mAsyncSendBufferMutex.lock();
-                        std::queue<ArrayWithLength>().swap(mAsyncSendBuffer);
-                        mAsyncSendBufferMutex.unlock();
-
-                        ArrayWithLength().swap(mPacketToSend);
-                        mBytesSent = 0;
-
-                        Logger::GetInstance().Log("Ran into a snag, restarting stack!", Logger::Level::WARNING);
-                        std::this_thread::sleep_for(100ms);
+                        HandleError();
                     } else if (mRetryCounter >= cMaxRetries) {
                         Logger::GetInstance().Log("Too many errors! Bailing out!", Logger::Level::ERROR);
-                        CloseDevice();
+                        HandleClose();
                         mRetryCounter = 0;
                     }
 
@@ -438,12 +521,13 @@ bool USBReader::StartReceiverThread()
 
                     if (!mReceiveStitching) {
                         if (mError) {
-                            // Clear the send buffer when an error occured because the buffer will fill up quickly and
-                            // the data is probably no longer relevant
+                            // Clear the send buffer when an error occured because the buffer will fill up quickly
+                            // and the data is probably no longer relevant
                             mAsyncSendBufferMutex.lock();
                             std::queue<ArrayWithLength>().swap(mAsyncSendBuffer);
                             mAsyncSendBufferMutex.unlock();
                         }
+
                         if (!mAsyncSendBuffer.empty() && mPacketToSend.second == 0) {
                             // Pop the first packet from the buffer if our previous packet was processed
                             Logger::GetInstance().Log("Popping packet from buffer", Logger::Level::TRACE);
@@ -452,69 +536,13 @@ bool USBReader::StartReceiverThread()
                             mAsyncSendBuffer.pop();
                             mAsyncSendBufferMutex.unlock();
                         }
-
-                        if (mPacketToSend.second != 0) {
-                            size_t      lPacketSize{0};
-                            std::string lPacket{};
-
-                            // First add the packet header
-                            AsyncCommand lCommand{};
-                            memset(&lCommand, 0, sizeof(lCommand));
-                            lCommand.channel = cAsyncUserChannel;
-                            lCommand.magic   = Asynchronous;
-
-                            lPacket.append(reinterpret_cast<char*>(&lCommand), cAsyncHeaderSize);
-                            lPacketSize += cAsyncHeaderSize;
-
-                            // If we are not stitching we need to add a subheader
-                            if (!mSendStitching) {
-                                mBytesSent = 0;
-
-                                AsyncSubHeader lSubHeader{};
-                                memset(&lSubHeader, 0, sizeof(lSubHeader));
-                                lSubHeader.magic = cAsyncCommandSendPacket;
-                                lSubHeader.mode  = cAsyncModeDebug;
-                                lSubHeader.ref   = cAsyncCommandSendPacket;
-                                lSubHeader.size  = mPacketToSend.second;
-                                Logger::GetInstance().Log("size = " + std::to_string(mPacketToSend.second),
-                                                          Logger::Level::TRACE);
-
-                                lPacket.append(reinterpret_cast<char*>(&lSubHeader), cAsyncSubHeaderSize);
-
-                                lPacketSize += cAsyncSubHeaderSize;
-                            }
-
-                            // Packet is too big, start stitching
-                            if (mPacketToSend.second - mBytesSent + lPacketSize > cMaxUSBBuffer) {
-                                Logger::GetInstance().Log("SendStitching", Logger::Level::TRACE);
-                                mSendStitching = true;
-                                // Start from bytes sent, then add the max usb buffer - header size
-                                lPacket.append(mPacketToSend.first.at(mBytesSent),
-                                               mPacketToSend.first.at(mBytesSent + cMaxUSBBuffer - lPacketSize - 1));
-                                // We don't count the header size for bytes sent
-                                mBytesSent += cMaxUSBBuffer - lPacketSize;
-                                lPacketSize = cMaxUSBBuffer;
-                            } else {
-                                mSendStitching = false;
-                                lPacketSize += mPacketToSend.second - mBytesSent;
-                                lPacket.append(mPacketToSend.first.at(mBytesSent),
-                                               mPacketToSend.first.at(mBytesSent + lPacketSize - 1));
-                                Logger::GetInstance().Log("Endstitch", Logger::Level::TRACE);
-
-                                ArrayWithLength().swap(mPacketToSend);
-                            }
-                            if (USBBulkWrite(0x3, lPacket, lPacketSize, 1000) == -1) {
-                                mError = true;
-                            }
-                        }
+                        HandleAsynchronousSend();
                     }
+                    // Very small delay to make the computer happy
+                    std::this_thread::sleep_for(10us);
                 }
-                // Very small delay to make the computer happy
-                std::this_thread::sleep_for(10us);
-            });
-        } else {
-            lReturn = false;
-        }
+            }
+        });
     } else {
         lReturn = false;
     }
@@ -541,7 +569,6 @@ void USBReader::Send(std::string_view aData)
 
 USBReader::~USBReader()
 {
-    if (mDeviceHandle != nullptr) {
-        CloseDevice();
-    }
+    Close();
+    libusb_exit(nullptr);
 }

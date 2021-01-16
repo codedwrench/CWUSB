@@ -70,12 +70,31 @@ int main(int argc, char* argv[])
     std::shared_ptr<USBReader>          lUSBReaderConnection{std::make_shared<USBReader>()};
 
     bool lSuccess{false};
+    bool lUSBSuccess{false};
 
-    while (!lSuccess) {
-        lSuccess = lXLinkKaiConnection->Open(mSettingsModel.mXLinkIp, std::stoi(mSettingsModel.mXLinkPort));
-        lSuccess &= lUSBReaderConnection->OpenDevice();
+    while (((!lUSBSuccess) || (!lSuccess)) && gRunning) {
+        // Try to open Xlink Connection
         if (!lSuccess) {
-            std::this_thread::sleep_for(std::chrono::seconds(1));
+            lSuccess = lXLinkKaiConnection->Open(mSettingsModel.mXLinkIp, std::stoi(mSettingsModel.mXLinkPort));
+            if (!lSuccess) {
+                Logger::GetInstance().Log("Could not open XLink Kai connection, retrying in 10 seconds",
+                                          Logger::Level::INFO);
+                lXLinkKaiConnection->Close();
+            }
+        }
+
+        // Try to open USB Connection
+        if (!lUSBSuccess) {
+            lUSBSuccess = lUSBReaderConnection->Open();
+            if (!lUSBSuccess) {
+                Logger::GetInstance().Log("Could not open USB connection, retrying in 10 seconds", Logger::Level::INFO);
+                lUSBReaderConnection->Close();
+            }
+        }
+
+        if (!lSuccess || !lUSBSuccess) {
+            // Try again in 10 seconds
+            std::this_thread::sleep_for(std::chrono::seconds(10));
         }
     }
 
@@ -92,11 +111,11 @@ int main(int argc, char* argv[])
         mSettingsModel.mEngineStatus = SettingsModel_Constants::EngineStatus::Error;
     }
 
+    lUSBReaderConnection->Close();
 
     lSignalIoService.stop();
     if (lThread.joinable()) {
         lThread.join();
     }
-    lUSBReaderConnection->CloseDevice();
     exit(0);
 }

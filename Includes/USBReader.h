@@ -28,18 +28,21 @@ class XLinkKaiConnection;
 class USBReader
 {
 public:
+    USBReader();
     ~USBReader();
+    USBReader(const USBReader& aUSBReader) = delete;
+    USBReader& operator=(const USBReader& aUSBReader) = delete;
 
     /**
      * Closes the device
      */
-    void CloseDevice();
+    void Close();
 
     /**
      * Opens the the USB device, so we can send/read data.
      * @return true if successful.
      */
-    bool OpenDevice();
+    bool Open();
 
     /**
      * Sends a Bulk In request on the USB bus.
@@ -58,7 +61,7 @@ public:
      * @param aTimeout - The timeout of the request to set.
      * @return 0 on success, < 0 on error .
      */
-    int USBBulkWrite(int aEndpoint, std::string_view aData, int aSize, int aTimeOut);
+    int USBBulkWrite(int aEndpoint, char* aData, int aSize, int aTimeOut);
 
     /**
      * Handles traffic from USB.
@@ -75,6 +78,9 @@ private:
     bool USBCheckDevice();
     void HandleAsynchronous(USB_Constants::AsyncCommand& aData, int aLength);
     void HandleAsynchronousData(USB_Constants::AsyncCommand& aData, int aLength);
+    void HandleAsynchronousSend();
+    void HandleClose();
+    void HandleError();
     void HandleStitch(USB_Constants::AsyncCommand& aData, int aLength);
     int  SendHello();
 
@@ -82,6 +88,8 @@ private:
     bool                            mReceiveStitching{false};
     ArrayWithLength                 mAsyncReceiveBuffer{};
     std::array<char, cMaxUSBBuffer> mTemporaryReceiveBuffer{0};
+
+    bool mAwaitClose{false};
 
     /** True: program starts stitching packets. **/
     bool                        mSendStitching{false};

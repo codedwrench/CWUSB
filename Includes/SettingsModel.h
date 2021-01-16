@@ -15,7 +15,7 @@ namespace SettingsModel_Constants
     static constexpr std::string_view cSaveXLinkIp{"XLinkIp"};
     static constexpr std::string_view cSaveXLinkPort{"XLinkPort"};
 
-    static constexpr Logger::Level    cDefaultLogLevel{Logger::Level::ERROR};
+    static constexpr Logger::Level    cDefaultLogLevel{Logger::Level::INFO};
     static constexpr bool             cDefaultAutoDiscoverXLinkKai{false};
     static constexpr std::string_view cDefaultXLinkIp{"127.0.0.1"};
     static constexpr std::string_view cDefaultXLinkPort{"34523"};

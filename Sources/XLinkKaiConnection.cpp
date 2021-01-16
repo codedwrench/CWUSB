@@ -95,7 +95,7 @@ bool XLinkKaiConnection::Send(std::string_view aCommand, std::string_view aData)
     } else {
         Logger::GetInstance().Log("Could not send message on closed socket.", Logger::Level::DEBUG);
         mConnected = false;
-        lReturn = false;
+        lReturn    = false;
     }
     return lReturn;
 }
@@ -134,6 +134,8 @@ void XLinkKaiConnection::ReceiveCallback(const boost::system::error_code& aError
 
     // If we actually received anything useful, react.
     if (!lData.empty()) {
+        // Make sure the keepalive timer gets tickled so it doesn't bite.
+        mKeepAliveTimerStart += (std::chrono::system_clock::now() - mKeepAliveTimerStart);
         std::size_t lFirstSeparator{lData.find(cSeparator)};
         std::string lCommand{lData.substr(0, lFirstSeparator + 1)};
 
@@ -198,7 +200,7 @@ bool XLinkKaiConnection::StartReceiverThread()
                 while (!mIoService.stopped()) {
                     if ((!mConnected && !mConnectInitiated)) {
                         // Lost connection somewhere, reconnect.
-                        Close();
+                        Close(false);
                         Open(mIp, mPort);
                         Connect();
                         std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -209,6 +211,13 @@ bool XLinkKaiConnection::StartReceiverThread()
                         mConnected        = false;
                         // Retry in 10 seconds
                         std::this_thread::sleep_for(10s);
+                    } else if (mConnected && !mConnectInitiated &&
+                               (std::chrono::system_clock::now() > (mKeepAliveTimerStart + cKeepAliveTimeout))) {
+                        // KaiEngine stopped sending keepalive messages, must've died.
+                        Logger::GetInstance().Log("It seems KaiEngine has stopped responding, resetting connection ...",
+                                                  Logger::Level::ERROR);
+                        mConnected        = false;
+                        mConnectInitiated = false;
                     } else {
                         mIoService.poll();
                         // Very small delay to make the computer happy
@@ -225,7 +234,13 @@ bool XLinkKaiConnection::StartReceiverThread()
     return lReturn;
 }
 
+
 void XLinkKaiConnection::Close()
+{
+    Close(true);
+}
+
+void XLinkKaiConnection::Close(bool aKillThread)
 {
     try {
         if (mConnected || mConnectInitiated) {
@@ -234,7 +249,7 @@ void XLinkKaiConnection::Close()
             mConnectInitiated = false;
         }
 
-        if (mReceiverThread != nullptr) {
+        if (aKillThread && mReceiverThread != nullptr) {
             if (!mIoService.stopped()) {
                 mIoService.stop();
             }

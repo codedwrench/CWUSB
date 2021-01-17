@@ -508,11 +508,10 @@ bool USBReader::StartReceiverThread()
                             mLength = lLength;
                             ReceiveCallback();
                         } else if (lLength == LIBUSB_ERROR_TIMEOUT) {
-                            // Timeout errors are probably recoverable
-                            std::this_thread::sleep_for(100ms);
+                            // Ignore, we're expecting this
                         } else if (lLength == LIBUSB_ERROR_BUSY) {
-                            // Also not fatal probably, wait another 10ms
-                            std::this_thread::sleep_for(10ms);
+                            // Also not fatal probably, wait another 1ms
+                            std::this_thread::sleep_for(1ms);
                         } else {
                             // Probably fatal, try a restart of the device
                             mError = true;
@@ -539,7 +538,10 @@ bool USBReader::StartReceiverThread()
                         HandleAsynchronousSend();
                     }
                     // Very small delay to make the computer happy
-                    std::this_thread::sleep_for(10us);
+                    if(!mSendStitching || !mReceiveStitching)
+                    {
+                        std::this_thread::sleep_for(100us);
+                    }
                 }
             }
         });

@@ -403,7 +403,7 @@ int USBReader::USBBulkWrite(int aEndpoint, char* aData, int aSize, int aTimeOut)
         int lError = libusb_bulk_transfer(mDeviceHandle, aEndpoint, reinterpret_cast<unsigned char*>(aData), aSize, &lReturn, aTimeOut);
         if (lError < 0) {
             Logger::GetInstance().Log(
-                std::string("Error during Bulk write: ") + libusb_strerror(static_cast<libusb_error>(mError)),
+                std::string("Error during Bulk write: ") + libusb_strerror(static_cast<libusb_error>(lError)),
                 Logger::Level::ERROR);
             lReturn = -1;
         }

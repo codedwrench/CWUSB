@@ -97,7 +97,7 @@ add_executable(PSPXLinkBridge main.cpp
         ${EXTRA_INCLUDES})
 
 if (BUILD_STATIC)
-	target_compile_options(PSPXLinkBridge PRIVATE -static)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static")
 endif ()
 
 target_include_directories(PSPXLinkBridge PRIVATE ${LIBUSB_INCLUDE_DIR} ${Boost_INCLUDE_DIR})

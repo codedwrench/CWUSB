@@ -60,7 +60,7 @@ static inline int IsDebugPrintCommand(AsyncCommand& aData, int aLength)
         auto* lSubHeader{reinterpret_cast<AsyncSubHeader*>(reinterpret_cast<char*>(&aData) + cAsyncHeaderSize)};
         if (lSubHeader->magic == DebugPrint) {
             if (lSubHeader->mode == cAsyncModePacket && lSubHeader->ref == cAsyncCommandSendPacket) {
-                Logger::GetInstance().Log("Size reported:" + std::to_string(lSubHeader->size), Logger::Level::TRACE);
+                Logger::GetInstance().Log("Size reported: " + std::to_string(lSubHeader->size), Logger::Level::TRACE);
                 lReturn = cAsyncModePacket;
             } else if (lSubHeader->mode == cAsyncModeDebug && lSubHeader->ref == cAsyncCommandPrintData) {
                 lReturn = cAsyncModeDebug;
@@ -115,7 +115,7 @@ void USBReader::HandleAsynchronousData(AsyncCommand& aData, int aLength)
         if (lPacketMode == cAsyncModePacket) {
             // Grab the packet length from the packet
             mActualPacketLength =
-                (reinterpret_cast<AsyncSubHeader*>(reinterpret_cast<char*>(&aData) + cAsyncHeaderSize))->size;
+                       (reinterpret_cast<AsyncSubHeader*>(reinterpret_cast<char*>(&aData) + cAsyncHeaderSize))->size;
 
             // It fits within the standard USB buffer, nothing special needs to be done!
             if (mActualPacketLength <= cMaxUSBPacketSize - cAsyncHeaderAndSubHeaderSize) {
@@ -200,7 +200,7 @@ void USBReader::HandleAsynchronousSend()
             ArrayWithLength().swap(mPacketToSend);
             mBytesSent = 0;
         }
-        if (USBBulkWrite(0x3, lPacket.data(), lPacketSize, 1) == -1) {
+        if (USBBulkWrite(0x3, lPacket.data(), lPacketSize, 3) == -1) {
             mError = true;
         }
     }
@@ -266,7 +266,7 @@ void USBReader::HandleStitch(AsyncCommand& aData, int aLength)
             // Focus on the data part
             std::string lData{reinterpret_cast<char*>(&aData) + cAsyncHeaderSize, lLength - cAsyncHeaderSize};
 
-            lData.copy(mAsyncReceiveBuffer.first.data() + mAsyncReceiveBuffer.second, 0);
+            lData.copy(mAsyncReceiveBuffer.first.data() + mAsyncReceiveBuffer.second,  mAsyncReceiveBuffer.second, 0);
             mAsyncReceiveBuffer.second += lLength - static_cast<int>(cAsyncHeaderSize);
 
             // If we are smaller than the max USB packet size, we are done and we can send the packet on its merry way
@@ -503,7 +503,7 @@ bool USBReader::StartReceiverThread()
 
                     if (!mSendStitching) {
                         // First read, then write
-                        int lLength{USBBulkRead(0x81, 512, 1)};
+                        int lLength{USBBulkRead(0x81, 512, 2)};
                         if (lLength > 0) {
                             mLength = lLength;
                             ReceiveCallback();

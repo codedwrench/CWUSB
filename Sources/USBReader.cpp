@@ -14,6 +14,20 @@
 #include <boost/asio.hpp>
 #include <sys/types.h>
 
+
+// This garbage is needed for it to compile when building statically
+#ifdef BUILD_STATIC
+#ifdef _MSC_VER
+#pragma comment(lib, "legacy_stdio_definitions.lib")
+#ifdef __cplusplus
+FILE iob[] = { *stdin, *stdout, *stderr };
+extern "C" {
+    FILE * __cdecl _iob(void) { return iob; }
+}
+#endif
+#endif
+#endif
+
 #include <libusb.h>
 
 #include "../Includes/Logger.h"

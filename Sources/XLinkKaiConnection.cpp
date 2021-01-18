@@ -139,7 +139,7 @@ void XLinkKaiConnection::ReceiveCallback(const boost::system::error_code& aError
         std::size_t lFirstSeparator{lData.find(cSeparator)};
         std::string lCommand{lData.substr(0, lFirstSeparator + 1)};
 
-        if (lCommand == cEthernetDataFormat) {
+        if (lCommand == std::string(cEthernetDataFormat) + cSeparator.data()) {
             Logger::GetInstance().Log("Received: " + PrettyHexString(lData), Logger::Level::TRACE);
         } else {
             Logger::GetInstance().Log("Received: " + lCommand + lData, Logger::Level::TRACE);

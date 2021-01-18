@@ -1,6 +1,5 @@
 cmake_minimum_required(VERSION 3.15)
 project(PSPXLinkBridge)
-
 set(CMAKE_MODULE_PATH
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
   "${CMAKE_MODULE_PATH}"
@@ -47,25 +46,36 @@ if (MSVC OR MSYS OR MINGW)
         set(Boost_ARCHITECTURE "-x64")
     endif ()
     
-    set(BOOST_ROOT "c:/Program Files/boost_1_74_0/output/")
+    set(BOOST_ROOT "d:/boost_1_75_0")
+    set(Boost_LIBRARY_DIR "d:/boost_1_75_0/stage/lib")
 
+    if (NOT BUILD_STATIC)
     # Magic that boost on windows seems to need.
     add_definitions( -DWIN32_LEAN_AND_MEAN )
     add_definitions( -DBOOST_ALL_NO_LIB )
     add_definitions( -DBOOST_ALL_DYN_LINK )
+	endif ()
 
     # The logger module uses ERROR in an enum class, GDI also uses this, but screw GDI
     # We have no GUI anyway!
     add_definitions( -DNOGDI )
     set(LIBUSB_DEPENDS_DIR "C:/libusb")
+    
+    # On windows avoid dll-hell, just static link this
 endif ()
+
+if (BUILD_STATIC)
+	message("Static linking enabled")
+    set(BUILD_STATIC ON)
+    set(Boost_USE_STATIC_LIBS ON)
+endif()
 
 # Concepts seems to break on a bunch of compilers, see: https://github.com/boostorg/asio/issues/312
 add_definitions(-DBOOST_ASIO_DISABLE_CONCEPTS)
 
 find_package(LibUSB REQUIRED)
 find_package(Threads REQUIRED)
-find_package(Boost 1.71 REQUIRED COMPONENTS thread system program_options)
+find_package(Boost 1.71 REQUIRED COMPONENTS chrono date_time atomic thread system program_options)
 
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/PSPLinkBSD.txt
      DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
@@ -87,9 +97,11 @@ add_executable(PSPXLinkBridge main.cpp
         Includes/USBReader.h
         ${EXTRA_INCLUDES})
 
-target_include_directories(PSPXLinkBridge PRIVATE ${LIBUSB_INCLUDE_DIR} ${Boost_INCLUDE_DIRS})
-target_link_libraries(PSPXLinkBridge ${Boost_LIBRARIES} ${LIBUSB_LIBRARIES} ${PLATFORM_SPECIFIC_LIBRARIES})
-
-if (MSYS OR MINGW)
-	target_compile_options(PSPXLinkBridge PRIVATE -static-libgcc -static-libstdc++)
+if (BUILD_STATIC)
+	target_compile_options(PSPXLinkBridge PRIVATE -static)
 endif ()
+
+target_include_directories(PSPXLinkBridge PRIVATE ${LIBUSB_INCLUDE_DIR} ${Boost_INCLUDE_DIR})
+target_link_libraries(PSPXLinkBridge PRIVATE ${Boost_LIBRARIES} ${LIBUSB_LIBRARIES} ${PLATFORM_SPECIFIC_LIBRARIES})
+
+

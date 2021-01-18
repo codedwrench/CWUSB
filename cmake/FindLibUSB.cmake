@@ -51,31 +51,15 @@ FIND_LIBRARY(LIBUSB_LIBRARIES NAMES
    /opt
    "${LIBUSB_DEPENDS_DIR}/"
    PATH_SUFFIXES
-IF(MSYS OR MINGW)
+IF (BUILD_STATIC)
+    /MinGW64/static
+ELSEIF(MSYS OR MINGW)
    # Do not use the ms64 dll for mingw
 	/MinGW64/dll
 ELSE()
     /MS64/dll
 ENDIF()
-
-   )
-
-IF(WIN32)
-    FIND_FILE(LibUSB_DLL
-        libusb-1.0.dll
-    PATHS
-        "${LIBUSB_DEPENDS_DIR}/"
-    PATH_SUFFIXES
-IF(MSYS OR MINGW)
-   # Do not use the ms64 dll for mingw
-	/MinGW64/dll
-ELSE()
-    /MS64/dll
-ENDIF()
-
 )
-ENDIF()
-
 
 INCLUDE(FindPackageHandleStandardArgs)
 FIND_PACKAGE_HANDLE_STANDARD_ARGS(LibUSB DEFAULT_MSG LIBUSB_LIBRARIES LIBUSB_INCLUDE_DIR)

@@ -43,7 +43,7 @@ namespace
     constexpr unsigned int cPSPVID{0x54C};
     constexpr unsigned int cPSPPID{0x1C9};
     constexpr unsigned int cMaxRetries{50};
-    constexpr unsigned int cMaxSendBufferItems{100};
+    constexpr unsigned int cMaxSendBufferItems{20};
 
 
 }  // namespace
@@ -126,7 +126,9 @@ void USBReader::HandleAsynchronousData(AsyncCommand& aData, int aLength)
         std::string lData{reinterpret_cast<char*>(&aData) + cAsyncHeaderAndSubHeaderSize, static_cast<size_t>(lLength)};
 
         // We are a packet, so we can check if we can send it off
-        if (lPacketMode == cAsyncModePacket) {
+
+        switch (lPacketMode){
+         case cAsyncModePacket:
             // Grab the packet length from the packet
             mActualPacketLength =
                        (reinterpret_cast<AsyncSubHeader*>(reinterpret_cast<char*>(&aData) + cAsyncHeaderSize))->size;
@@ -144,11 +146,14 @@ void USBReader::HandleAsynchronousData(AsyncCommand& aData, int aLength)
                 // with zeroes
                 mAsyncReceiveBuffer.second = lLength;
             }
-        } else if (lPacketMode == cAsyncModeDebug) {
+            break;
+        case cAsyncModeDebug:
             // We can just go ahead and print the debug data, I'm assuming it will never go past 512 bytes. If it does,
             // we'll see when we get there :|
             Logger::GetInstance().Log("PSP: " + std::string(lData, lLength), Logger::Level::DEBUG);
-        } else {
+            break;
+        
+        default:
             // Don't know what we got
             char* lData{reinterpret_cast<char*>(&aData)};
             Logger::GetInstance().Log("Unknown data:" + PrettyHexString(std::string(lData, mLength)),
@@ -193,7 +198,7 @@ void USBReader::HandleAsynchronousSend()
 
         // Packet is too big, start stitching
         if (mPacketToSend.second - mBytesSent + lPacketSize > cMaxUSBBuffer) {
-            Logger::GetInstance().Log("SendStitching", Logger::Level::TRACE);
+            //Logger::GetInstance().Log("SendStitching", Logger::Level::TRACE);
             mSendStitching = true;
             // Start from bytes sent, then add the max usb buffer - header size
             memcpy(lPacket.data() + lPacketSize, mPacketToSend.first.data() + mBytesSent, cMaxUSBBuffer - lPacketSize);
@@ -209,12 +214,12 @@ void USBReader::HandleAsynchronousSend()
             
             lPacketSize += mPacketToSend.second - mBytesSent;
 
-            Logger::GetInstance().Log("Endstitch", Logger::Level::TRACE);
+            //Logger::GetInstance().Log("Endstitch", Logger::Level::TRACE);
 
             ArrayWithLength().swap(mPacketToSend);
             mBytesSent = 0;
         }
-        if (USBBulkWrite(0x3, lPacket.data(), lPacketSize, 3) == -1) {
+        if (USBBulkWrite(0x3, lPacket.data(), lPacketSize, 1) == -1) {
             mError = true;
         }
     }
@@ -259,21 +264,6 @@ void USBReader::HandleError()
 void USBReader::HandleStitch(AsyncCommand& aData, int aLength)
 {
     int lLength{aLength};
-    if (IsDebugPrintCommand(aData, aLength) > 0) {
-        // We somehow got another packet type before stitching was done probably, maybe the packet was done and
-        // happened to be 512 bytes long, send it
-        mIncomingConnection->Send(std::string(mAsyncReceiveBuffer.first.data(), mAsyncReceiveBuffer.second));
-        mReceiveStitching = false;
-
-        // Now on to the current packet, lets just call HandleAsynchronousData, because this is the job of that
-        // function anyway
-        HandleAsynchronousData(aData, aLength);
-
-        Logger::GetInstance().Log("We got a debugprint command while stitching, solved as best as we could",
-                                  Logger::Level::TRACE);
-
-        // Donezo :D
-    } else {
         // Lets continue stitching
         // If we are stitching, the size should be bigger than the command
         if (lLength > cAsyncHeaderSize) {
@@ -296,7 +286,6 @@ void USBReader::HandleStitch(AsyncCommand& aData, int aLength)
             Logger::GetInstance().Log("Unknown data:" + PrettyHexString(std::string(lData, mLength)),
                                       Logger::Level::DEBUG);
         }
-    }
 }
 
 bool USBReader::Open()
@@ -374,31 +363,15 @@ void USBReader::SetIncomingConnection(std::shared_ptr<XLinkKaiConnection> aDevic
 int USBReader::USBBulkRead(int aEndpoint, int aSize, int aTimeOut)
 {
     int lReturn{-1};
-    if (mDeviceHandle != nullptr) {
         int lError = libusb_bulk_transfer(mDeviceHandle,
                                           aEndpoint,
                                           reinterpret_cast<unsigned char*>(mTemporaryReceiveBuffer.data()),
                                           aSize,
                                           &lReturn,
                                           aTimeOut);
-        try {
-            if (lReturn > 0) {
-                Logger::GetInstance().Log(
-                    std::string("Bulk Read, size: ") + std::to_string(aSize) +
-                        " , timeout: " + std::to_string(aTimeOut) + ", data: " +
-                        PrettyHexString(std::string(reinterpret_cast<char*>(mTemporaryReceiveBuffer.data()), lReturn)),
-                    Logger::Level::TRACE);
-            }
-        } catch (const std::exception& aException) {
-            // Size changed when reading, possible that the PSP disconnected while transferring
-            lReturn = -1;
-            Logger::GetInstance().Log("Lost connection with PSP", Logger::Level::WARNING);
-        }
-
         if (lError != 0) {
             lReturn = lError;
         }
-    }
 
     return lReturn;
 }
@@ -407,13 +380,6 @@ int USBReader::USBBulkWrite(int aEndpoint, char* aData, int aSize, int aTimeOut)
 {
     int lReturn{-1};
 
-    if (mDeviceHandle != nullptr) {
-        Logger::GetInstance().Log(
-            std::string("Bulk Write, size: ") + std::to_string(aSize) + " , timeout: " + std::to_string(aTimeOut),
-            Logger::Level::TRACE);
-
-        Logger::GetInstance().Log(PrettyHexString(std::string(reinterpret_cast<char*>(aData), aSize)),
-                                  Logger::Level::TRACE);
         int lError = libusb_bulk_transfer(mDeviceHandle, aEndpoint, reinterpret_cast<unsigned char*>(aData), aSize, &lReturn, aTimeOut);
         if (lError < 0) {
             Logger::GetInstance().Log(
@@ -421,7 +387,6 @@ int USBReader::USBBulkWrite(int aEndpoint, char* aData, int aSize, int aTimeOut)
                 Logger::Level::ERROR);
             lReturn = -1;
         }
-    }
 
     return lReturn;
 }
@@ -517,15 +482,14 @@ bool USBReader::StartReceiverThread()
 
                     if (!mSendStitching) {
                         // First read, then write
-                        int lLength{USBBulkRead(0x81, 512, 2)};
+                        int lLength{USBBulkRead(0x81, 512, 1)};
                         if (lLength > 0) {
                             mLength = lLength;
                             ReceiveCallback();
                         } else if (lLength == LIBUSB_ERROR_TIMEOUT) {
                             // Ignore, we're expecting this
                         } else if (lLength == LIBUSB_ERROR_BUSY) {
-                            // Also not fatal probably, wait another 1ms
-                            std::this_thread::sleep_for(1ms);
+                            // Ignore, we're expecting this
                         } else {
                             // Probably fatal, try a restart of the device
                             mError = true;
@@ -533,28 +497,15 @@ bool USBReader::StartReceiverThread()
                     }
 
                     if (!mReceiveStitching) {
-                        if (mError) {
-                            // Clear the send buffer when an error occured because the buffer will fill up quickly
-                            // and the data is probably no longer relevant
-                            mAsyncSendBufferMutex.lock();
-                            std::queue<ArrayWithLength>().swap(mAsyncSendBuffer);
-                            mAsyncSendBufferMutex.unlock();
-                        }
-
                         if (!mAsyncSendBuffer.empty() && mPacketToSend.second == 0) {
                             // Pop the first packet from the buffer if our previous packet was processed
-                            Logger::GetInstance().Log("Popping packet from buffer", Logger::Level::TRACE);
+                            //Logger::GetInstance().Log("Popping packet from buffer", Logger::Level::TRACE);
                             mAsyncSendBufferMutex.lock();
                             mAsyncSendBuffer.front().swap(mPacketToSend);
                             mAsyncSendBuffer.pop();
                             mAsyncSendBufferMutex.unlock();
                         }
                         HandleAsynchronousSend();
-                    }
-                    // Very small delay to make the computer happy
-                    if(!mSendStitching || !mReceiveStitching)
-                    {
-                        std::this_thread::sleep_for(100us);
                     }
                 }
             }
@@ -568,18 +519,23 @@ bool USBReader::StartReceiverThread()
 void USBReader::Send(std::string_view aData)
 {
     const std::lock_guard<std::mutex> lLock(mAsyncSendBufferMutex);
-    // We limit the send buffer size to 100, that is 230400 bytes of ram used.
+    // We limit the send buffer size to 20
     // If this increases latency too much, lower this.
     if (mAsyncSendBuffer.size() < cMaxSendBufferItems) {
-        ArrayWithLength lArray{};
-        aData.copy(lArray.first.data(), aData.size());
-        lArray.second = aData.size();
-        mAsyncSendBuffer.push(lArray);
-    }
-    if (mAsyncSendBuffer.size() > 10) {
-        Logger::GetInstance().Log(
-            "Sendbuffer got above 20 packets, some latency expected: " + std::to_string(mAsyncSendBuffer.size()),
-            Logger::Level::WARNING);
+        // If it does not match the previous packet
+        if (mLastAddedPacket.second != aData.size() && std::string(mLastAddedPacket.first.data(), mLastAddedPacket.second) != aData)
+        {
+            ArrayWithLength lArray{};
+            aData.copy(lArray.first.data(), aData.size());
+            lArray.second = aData.size();
+            mAsyncSendBuffer.push(lArray);
+            mLastAddedPacket = lArray;
+            if (mAsyncSendBuffer.size() > 10) {
+                Logger::GetInstance().Log(
+                    "Sendbuffer got above 20 packets, some latency expected: " + std::to_string(mAsyncSendBuffer.size()),
+                    Logger::Level::WARNING);
+            }
+        }
     }
 }
 

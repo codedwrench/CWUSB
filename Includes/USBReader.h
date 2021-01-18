@@ -96,6 +96,7 @@ private:
     std::queue<ArrayWithLength> mAsyncSendBuffer{};
     std::mutex                  mAsyncSendBufferMutex{};  //< 2 threads are accessing this.
     ArrayWithLength             mPacketToSend{};
+    ArrayWithLength             mLastAddedPacket{};
     unsigned int                mBytesSent{0};
 
     libusb_device_handle*               mDeviceHandle{nullptr};

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.15)
 project(PSPXLinkBridge)
-
+set(CMAKE_VERBOSE_MAKEFILE ON)
 set(CMAKE_MODULE_PATH
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
   "${CMAKE_MODULE_PATH}"
@@ -8,6 +8,7 @@ set(CMAKE_MODULE_PATH
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /O2")
 
 option(BUILD_DOC "Build doxygen" OFF)
 option(ENABLE_TESTS "Build unittests" OFF)
@@ -48,8 +49,8 @@ if (MSVC OR MSYS OR MINGW)
         set(Boost_ARCHITECTURE "-x64")
     endif ()
     
-    set(BOOST_ROOT "d:/boost_1_75_0")
-    set(Boost_LIBRARY_DIR "d:/boost_1_75_0/stage/lib")
+    set(BOOST_ROOT "e:/boost_1_75_0")
+    set(Boost_LIBRARY_DIR "e:/boost_1_75_0/stage/lib")
 
     if (NOT BUILD_STATIC)
         # Magic that boost on windows seems to need.
@@ -67,6 +68,7 @@ endif ()
 if (BUILD_STATIC)
     message("Static linking enabled")
     set(BUILD_STATIC ON)
+    add_definitions(-DBUILD_STATIC)
     set(Boost_USE_STATIC_LIBS ON)
 endif()
 
@@ -75,7 +77,7 @@ add_definitions(-DBOOST_ASIO_DISABLE_CONCEPTS)
 
 find_package(LibUSB REQUIRED)
 find_package(Threads REQUIRED)
-find_package(Boost 1.71 REQUIRED COMPONENTS chrono date_time atomic thread system program_options)
+find_package(Boost 1.71 REQUIRED COMPONENTS chrono date_time atomic thread regex system program_options)
 
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/PSPLinkBSD.txt
      DESTINATION ${CMAKE_CURRENT_BINARY_DIR})

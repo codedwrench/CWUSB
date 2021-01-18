@@ -52,7 +52,13 @@ FIND_LIBRARY(LIBUSB_LIBRARIES NAMES
    "${LIBUSB_DEPENDS_DIR}/"
    PATH_SUFFIXES
 IF (BUILD_STATIC)
-    /MinGW64/static
+    IF(MSYS OR MINGW)
+        /MinGW64/static
+    ELSEIF(MSVC)
+        /MS64/static
+    ELSE()
+        static
+    ENDIF()
 ELSEIF(MSYS OR MINGW)
    # Do not use the ms64 dll for mingw
 	/MinGW64/dll

@@ -261,7 +261,7 @@ void XLinkKaiConnection::Close(bool aKillThread)
             mSocket.close();
         }
     } catch (...) {
-        //std::cout << "Failed to disconnect :( " + boost::current_exception_diagnostic_information() << std::endl;
+        // std::cout << "Failed to disconnect :( " + boost::current_exception_diagnostic_information() << std::endl;
     }
 }
 

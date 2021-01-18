@@ -11,6 +11,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 option(BUILD_DOC "Build doxygen" OFF)
 option(ENABLE_TESTS "Build unittests" OFF)
+option(BUILD_STATIC "Statically link all libraries that can be statically linked" OFF)
 
 include_directories(Sources)
 include_directories(Tests)

@@ -16,8 +16,8 @@ bool USBReceiveThread::StartThread()
                 mMutex.lock();
                 if (!mQueue.empty()) {
                     // Do a deep copy so we can keep this mutex locked as short as possible
-                    USB_Constants::BinaryStitchStruct lFrontOfQueue{mQueue.front()};
-                    size_t                            lQueueSize{mQueue.size()};
+                    USB_Constants::BinaryStitchWiFiPacket lFrontOfQueue{mQueue.front()};
+                    size_t                                lQueueSize{mQueue.size()};
                     mQueue.pop();
                     mMutex.unlock();
 
@@ -43,13 +43,17 @@ bool USBReceiveThread::StartThread()
                         if (!lFrontOfQueue.stitch) {
                             // If we just finished our last message, use that, if this is a totally new message, use the
                             // front of queue.
-                            USB_Constants::BinaryStitchStruct& lSend =
-                                lUseLastReceived ? mLastReceivedMessage : lFrontOfQueue;
-
-                            if (lSend.length != mLastCompleteMessage.length &&
-                                lSend.data != mLastCompleteMessage.data) {
-                                mLastCompleteMessage = lSend;
-                                mConnection.Send(std::string_view(lSend.data.data(), lSend.length));
+                            if (lUseLastReceived) {
+                                if (mLastReceivedMessage.length != mLastCompleteMessage.length &&
+                                    mLastReceivedMessage.data != mLastCompleteMessage.data) {
+                                    mLastCompleteMessage = mLastReceivedMessage;
+                                    mConnection.Send(std::string_view(mLastReceivedMessage.data.data(),
+                                                                      mLastReceivedMessage.length));
+                                }
+                            } else if ((lFrontOfQueue.length != mLastCompleteMessage.length &&
+                                        lFrontOfQueue.data != mLastCompleteMessage.data)) {
+                                mLastCompleteMessage = lFrontOfQueue;
+                                mConnection.Send(std::string_view(lFrontOfQueue.data.data(), lFrontOfQueue.length));
                             }
                         }
                     }
@@ -77,14 +81,14 @@ void USBReceiveThread::StopThread()
     mThread = nullptr;
 }
 
-bool USBReceiveThread::AddToQueue(const USB_Constants::BinaryStitchStruct& aStruct)
+bool USBReceiveThread::AddToQueue(const USB_Constants::BinaryStitchUSBPacket& aStruct)
 {
     if (mQueue.size() < USBReceiveThread_Constants::cMaxQueueSize) {
         mMutex.lock();
         mQueue.push(aStruct);
         mMutex.unlock();
         if (mQueue.size() > (USBReceiveThread_Constants::cMaxQueueSize / 2)) {
-            Logger::GetInstance().Log("Receivebuffer got to over half its capacity!" + std::to_string(mQueue.size()),
+            Logger::GetInstance().Log("Receivebuffer got to over half its capacity! " + std::to_string(mQueue.size()),
                                       Logger::Level::WARNING);
         }
     } else {

@@ -1,30 +1,30 @@
 #pragma once
 #include "USBConstants.h"
 
-/* Copyright (c) 2020 [Rick de Bondt] - USBReceiveThread.h
+/* Copyright (c) 2020 [Rick de Bondt] - USBSendThread.h
  *
- * This file contains the header for a USBReceiveThread class which will be used to read data from the PSP.
- *
+ * This file contains the header for a USBSendThread class which will be used to grab data from XLink and format it
+ * for the PSP.
  **/
 
-namespace USBReceiveThread_Constants
+namespace USBSendThread_Constants
 {
     static constexpr int cMaxQueueSize{20};
 };
 
 class XLinkKaiConnection;
 
-class USBReceiveThread
+class USBSendThread
 {
 public:
     /**
-     * Constructor for USBReceiveThread.
+     * Constructor for USBSendThread.
      * @param aConnection - The connection to send the data on.
      */
-    explicit USBReceiveThread(XLinkKaiConnection& aConnection);
-    ~USBReceiveThread();
-    USBReceiveThread(const USBReceiveThread& aUSBReceiveThread) = delete;
-    USBReceiveThread& operator=(const USBReceiveThread& aUSBReceiveThread) = delete;
+    explicit USBSendThread(XLinkKaiConnection& aConnection);
+    ~USBSendThread();
+    USBSendThread(const USBSendThread& aUSBSendThread) = delete;
+    USBSendThread& operator=(const USBSendThread& aUSBSendThread) = delete;
 
     /**
      * Starts the thread to receive data from USB.
@@ -39,19 +39,19 @@ public:
 
     /**
      * Adds a message to the queue.
-     * @param aStruct - structure containing the message, length and if it should be stitched.
+     * @param aData - the data to put into the buffer.
      * @return true if queue not full.
      */
-    bool AddToQueue(const USB_Constants::BinaryStitchUSBPacket& aStruct);
+    bool AddToQueue(std::string_view aData);
 
 private:
     XLinkKaiConnection&                              mConnection;
     bool                                             mDone{true};
     bool                                             mError{false};
-    USB_Constants::BinaryStitchWiFiPacket            mLastReceivedMessage{};
-    USB_Constants::BinaryStitchWiFiPacket            mLastCompleteMessage{};
     std::mutex                                       mMutex{};
-    std::queue<USB_Constants::BinaryStitchUSBPacket> mQueue{};
+    USB_Constants::BinaryWiFiPacket                  mLastReceivedPacket{};
+    std::queue<USB_Constants::BinaryWiFiPacket>      mQueue{};
+    std::queue<USB_Constants::BinaryStitchUSBPacket> mOutgoingQueue{};
     bool                                             mStopRequest{false};
     std::shared_ptr<boost::thread>                   mThread{nullptr};
 };

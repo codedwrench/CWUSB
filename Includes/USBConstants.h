@@ -69,11 +69,24 @@ namespace USB_Constants
         Packet = 2
     };
 
-    struct BinaryStitchStruct
+    struct BinaryStitchWiFiPacket
     {
         std::array<char, cMaxAsynchronousBuffer> data;
         uint16_t                                 length;
         bool                                     stitch;
+    };
+
+    struct BinaryStitchUSBPacket
+    {
+        std::array<char, cMaxUSBPacketSize> data;
+        uint16_t                            length;
+        bool                                stitch;
+    };
+
+    struct BinaryWiFiPacket
+    {
+        std::array<char, cMaxAsynchronousBuffer> data;
+        uint16_t                                 length;
     };
 
     PACK(struct HostFsCommand {
@@ -95,13 +108,6 @@ namespace USB_Constants
         eMagicType magic;
         uint32_t   channel;
         uint32_t   size;
-    });
-
-    PACK(struct AdHocRedirectorEvent {
-        unsigned int magic;
-        int          type;
-        unsigned int value1;
-        unsigned int value2;
     });
 
     PACK(struct AsyncSubHeader {

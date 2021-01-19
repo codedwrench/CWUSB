@@ -19,7 +19,12 @@
 
 #pragma once
 
+#include <array>
+#include <queue>
+
 #include <stdint.h>
+
+#include "USBReader.h"
 
 #ifdef __GNUC__
 #define PACK(__Declaration__) __Declaration__ __attribute__((__packed__))
@@ -40,6 +45,10 @@
 namespace USB_Constants
 {
     constexpr unsigned int cAdhocRedirectorVersion{190};
+    constexpr unsigned int cMaxUSBPacketSize{512};
+
+    // The maximum 802.11 MTU is 2304 bytes. 802.11-2012, page 413, section 8.3.2.1
+    constexpr int cMaxAsynchronousBuffer{2304};
 
     enum eMagicType
     {
@@ -58,6 +67,13 @@ namespace USB_Constants
     {
         Debug  = 1,
         Packet = 2
+    };
+
+    struct BinaryStitchStruct
+    {
+        std::array<char, cMaxAsynchronousBuffer> data;
+        uint16_t                                 length;
+        bool                                     stitch;
     };
 
     PACK(struct HostFsCommand {
@@ -94,8 +110,6 @@ namespace USB_Constants
         int          size;
         int          ref;
     });
-
-    constexpr unsigned int cMaxUSBPacketSize{512};
 
     constexpr unsigned int cAsyncHeaderSize{sizeof(AsyncCommand)};
     constexpr unsigned int cAsyncSubHeaderSize{sizeof(AsyncSubHeader)};

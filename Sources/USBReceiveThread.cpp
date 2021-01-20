@@ -1,5 +1,7 @@
 #include "../Includes/USBReceiveThread.h"
 
+/* Copyright (c) 2021 [Rick de Bondt] - USBReceiveThread.cpp */
+
 #include "../Includes/Logger.h"
 #include "../Includes/XLinkKaiConnection.h"
 
@@ -16,14 +18,14 @@ bool USBReceiveThread::StartThread()
                 mMutex.lock();
                 if (!mQueue.empty()) {
                     // Do a deep copy so we can keep this mutex locked as short as possible
-                    USB_Constants::BinaryStitchWiFiPacket lFrontOfQueue{mQueue.front()};
-                    size_t                                lQueueSize{mQueue.size()};
+                    USB_Constants::BinaryStitchUSBPacket lFrontOfQueue(mQueue.front());
+                    size_t                               lQueueSize{mQueue.size()};
                     mQueue.pop();
                     mMutex.unlock();
 
                     // If there is a message available and it is unique, add it
                     if ((lFrontOfQueue.length != mLastReceivedMessage.length) &&
-                        (lFrontOfQueue.data != mLastReceivedMessage.data)) {
+                        (lFrontOfQueue.data.data() != mLastReceivedMessage.data.data())) {
                         bool lUseLastReceived{false};
                         // If the last message was too big for the USB-buffer, append the current one.
                         if (mLastReceivedMessage.stitch) {
@@ -50,9 +52,13 @@ bool USBReceiveThread::StartThread()
                                     mConnection.Send(std::string_view(mLastReceivedMessage.data.data(),
                                                                       mLastReceivedMessage.length));
                                 }
-                            } else if ((lFrontOfQueue.length != mLastCompleteMessage.length &&
-                                        lFrontOfQueue.data != mLastCompleteMessage.data)) {
-                                mLastCompleteMessage = lFrontOfQueue;
+                            } else if (lFrontOfQueue.length != mLastCompleteMessage.length &&
+                                       memcmp(lFrontOfQueue.data.data(),
+                                              mLastCompleteMessage.data.data(),
+                                              lFrontOfQueue.length) != 0) {
+                                memcpy(
+                                    mLastCompleteMessage.data.data(), lFrontOfQueue.data.data(), lFrontOfQueue.length);
+                                mLastCompleteMessage.length = lFrontOfQueue.length;
                                 mConnection.Send(std::string_view(lFrontOfQueue.data.data(), lFrontOfQueue.length));
                             }
                         }
@@ -75,6 +81,7 @@ void USBReceiveThread::StopThread()
     while (!mDone) {
         std::this_thread::sleep_for(std::chrono::seconds(1));
     }
+    ClearQueues();
     if (mThread->joinable()) {
         mThread->join();
     }
@@ -83,7 +90,9 @@ void USBReceiveThread::StopThread()
 
 bool USBReceiveThread::AddToQueue(const USB_Constants::BinaryStitchUSBPacket& aStruct)
 {
+    bool lReturn{false};
     if (mQueue.size() < USBReceiveThread_Constants::cMaxQueueSize) {
+        lReturn = true;
         mMutex.lock();
         mQueue.push(aStruct);
         mMutex.unlock();
@@ -94,4 +103,20 @@ bool USBReceiveThread::AddToQueue(const USB_Constants::BinaryStitchUSBPacket& aS
     } else {
         Logger::GetInstance().Log("Receivebuffer filled up!", Logger::Level::ERROR);
     }
+    return lReturn;
+}
+
+void USBReceiveThread::ClearQueues()
+{
+    mMutex.lock();
+    std::queue<USB_Constants::BinaryStitchUSBPacket>().swap(mQueue);
+    mLastCompleteMessage = {};
+    mLastReceivedMessage = {};
+    mMutex.unlock();
+}
+
+
+USBReceiveThread::~USBReceiveThread()
+{
+    StopThread();
 }

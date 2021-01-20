@@ -1,6 +1,6 @@
 #pragma once
 
-/* Copyright (c) 2020 [Rick de Bondt] - USBReader.h
+/* Copyright (c) 2021 [Rick de Bondt] - USBReader.h
  *
  * This file contains the header for a USBReader class which will be used to read/write data from/to the PSP.
  *
@@ -13,7 +13,8 @@
 
 #include <boost/thread.hpp>
 
-#include "../Includes/USBConstants.h"
+#include "../Includes/USBReceiveThread.h"
+#include "../Includes/USBSendThread.h"
 
 constexpr int cMaxUSBBuffer = 512;
 
@@ -103,8 +104,11 @@ private:
     bool                                mError{false};
     std::shared_ptr<XLinkKaiConnection> mIncomingConnection{nullptr};
     int                                 mLength{0};
-    std::shared_ptr<boost::thread>      mReceiverThread{nullptr};
-    int                                 mRetryCounter{0};
+    std::shared_ptr<boost::thread>      mUSBThread{nullptr};
+    std::shared_ptr<USBReceiveThread>   mUSBReceiveThread{nullptr};
+    std::shared_ptr<USBSendThread>      mUSBSendThread{nullptr};
+
+    int mRetryCounter{0};
 
     int  mActualPacketLength{0};  //< returned by PSP when receiving a netpacket.
     bool mUSBCheckSuccessful{false};

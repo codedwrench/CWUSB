@@ -1,8 +1,9 @@
-#include "../Includes/Logger.h"
 #include "../Includes/USBSendThread.h"
-#include "../Includes/XLinkKaiConnection.h"
 
-USBSendThread::USBSendThread(XLinkKaiConnection& aConnection) : mConnection(aConnection) {}
+/* Copyright (c) 2021 [Rick de Bondt] - USBSendThread.cpp */
+
+#include "../Includes/Logger.h"
+#include "../Includes/XLinkKaiConnection.h"
 
 bool USBSendThread::StartThread()
 {
@@ -24,6 +25,15 @@ bool USBSendThread::StartThread()
                     if ((lFrontOfQueue.length != mLastReceivedPacket.length) &&
                         (lFrontOfQueue.data != mLastReceivedPacket.data)) {
                         mLastReceivedPacket = lFrontOfQueue;
+
+                        // The length is too high, this needs to be split
+                        USB_Constants::BinaryStitchUSBPacket lPacket{};
+                        lPacket.stitch = lFrontOfQueue.length > cMaxUSBBuffer ? cMaxUSBBuffer : lFrontOfQueue.length;
+                        int lLength{lPacket.stitch ? cMaxUSBBuffer : lFrontOfQueue.length};
+
+                        memcpy(lPacket.data.data(), lFrontOfQueue.data.data(), lLength);
+                        lPacket.length = lLength;
+                        mOutgoingQueue.push(lPacket);
                     }
                 } else {
                     // Never forget to unlock a mutex
@@ -43,6 +53,7 @@ void USBSendThread::StopThread()
     while (!mDone) {
         std::this_thread::sleep_for(std::chrono::seconds(1));
     }
+    ClearQueues();
     if (mThread->joinable()) {
         mThread->join();
     }
@@ -51,7 +62,9 @@ void USBSendThread::StopThread()
 
 bool USBSendThread::AddToQueue(std::string_view aData)
 {
+    bool lReturn{false};
     if (mQueue.size() < USBSendThread_Constants::cMaxQueueSize) {
+        lReturn = true;
         USB_Constants::BinaryWiFiPacket lPacket{};
         memcpy(lPacket.data.data(), aData.data(), aData.size());
         lPacket.length = aData.size();
@@ -66,4 +79,14 @@ bool USBSendThread::AddToQueue(std::string_view aData)
     } else {
         Logger::GetInstance().Log("Receivebuffer filled up!", Logger::Level::ERROR);
     }
+    return lReturn;
+}
+
+void USBSendThread::ClearQueues()
+{
+    mMutex.lock();
+    std::queue<USB_Constants::BinaryWiFiPacket>().swap(mQueue);
+    std::queue<USB_Constants::BinaryStitchUSBPacket>().swap(mOutgoingQueue);
+    mLastReceivedPacket = {};
+    mMutex.unlock();
 }

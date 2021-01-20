@@ -94,6 +94,8 @@ add_executable(PSPXLinkBridge main.cpp
         Sources/Logger.cpp
         Sources/SettingsModel.cpp
         Sources/XLinkKaiConnection.cpp
+        Sources/USBReceiveThread.cpp
+        Sources/USBSendThead.cpp
         Sources/USBReader.cpp
         Includes/USBConstants.h
         Includes/Logger.h
@@ -101,6 +103,8 @@ add_executable(PSPXLinkBridge main.cpp
         Includes/XLinkKaiConnection.h
         Includes/NetConversionFunctions.h
         Includes/SettingsModel.h
+        Includes/USBReceiveThread.h
+        Includes/USBSendThread.h
         Includes/USBReader.h
         ${EXTRA_INCLUDES})
 

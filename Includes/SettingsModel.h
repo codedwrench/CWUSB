@@ -1,5 +1,12 @@
 #pragma once
 
+/* Copyright (c) 2021 [Rick de Bondt] - SettingsModel.h
+ *
+ * This file contains application wide settings, settable in a config.txt
+ *
+ **/
+
+
 #include <array>
 #include <string>
 

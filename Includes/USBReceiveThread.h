@@ -1,11 +1,16 @@
 #pragma once
-#include "USBConstants.h"
-
-/* Copyright (c) 2020 [Rick de Bondt] - USBReceiveThread.h
+/* Copyright (c) 2021 [Rick de Bondt] - USBReceiveThread.h
  *
  * This file contains the header for a USBReceiveThread class which will be used to read data from the PSP.
  *
  **/
+
+#include <memory>
+#include <mutex>
+
+#include <boost/thread.hpp>
+
+#include "USBConstants.h"
 
 namespace USBReceiveThread_Constants
 {
@@ -43,6 +48,11 @@ public:
      * @return true if queue not full.
      */
     bool AddToQueue(const USB_Constants::BinaryStitchUSBPacket& aStruct);
+
+    /**
+     * Clears all the queues in this class.
+     */
+    void ClearQueues();
 
 private:
     XLinkKaiConnection&                              mConnection;

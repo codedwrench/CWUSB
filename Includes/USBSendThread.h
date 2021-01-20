@@ -1,11 +1,16 @@
 #pragma once
-#include "USBConstants.h"
-
 /* Copyright (c) 2020 [Rick de Bondt] - USBSendThread.h
  *
  * This file contains the header for a USBSendThread class which will be used to grab data from XLink and format it
  * for the PSP.
  **/
+
+#include <mutex>
+#include <queue>
+
+#include <boost/thread.hpp>
+
+#include "USBConstants.h"
 
 namespace USBSendThread_Constants
 {
@@ -17,15 +22,6 @@ class XLinkKaiConnection;
 class USBSendThread
 {
 public:
-    /**
-     * Constructor for USBSendThread.
-     * @param aConnection - The connection to send the data on.
-     */
-    explicit USBSendThread(XLinkKaiConnection& aConnection);
-    ~USBSendThread();
-    USBSendThread(const USBSendThread& aUSBSendThread) = delete;
-    USBSendThread& operator=(const USBSendThread& aUSBSendThread) = delete;
-
     /**
      * Starts the thread to receive data from USB.
      * @return true if successful.
@@ -44,8 +40,12 @@ public:
      */
     bool AddToQueue(std::string_view aData);
 
+    /**
+     * Clears the queues in this object.
+     */
+    void ClearQueues();
+
 private:
-    XLinkKaiConnection&                              mConnection;
     bool                                             mDone{true};
     bool                                             mError{false};
     std::mutex                                       mMutex{};

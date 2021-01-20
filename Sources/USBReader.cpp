@@ -1,5 +1,7 @@
 #include "../Includes/USBReader.h"
 
+/* Copyright (c) 2021 [Rick de Bondt] - USBReader.cpp */
+
 #include <array>
 #include <chrono>
 #include <cstdio>
@@ -84,13 +86,13 @@ static inline int IsDebugPrintCommand(AsyncCommand& aData, int aLength)
 void USBReader::Close()
 {
     // Close thread nicely
-    if (mReceiverThread != nullptr && !mReceiverThread->joinable()) {
+    if (mUSBThread != nullptr && !mUSBThread->joinable()) {
         mAwaitClose = true;
         while (mAwaitClose) {
             std::this_thread::sleep_for(1s);
         }
-        mReceiverThread->join();
-        mReceiverThread = nullptr;
+        mUSBThread->join();
+        mUSBThread = nullptr;
     } else {
         HandleClose();
     }
@@ -458,10 +460,16 @@ bool USBReader::StartReceiverThread()
 {
     bool lReturn{true};
 
-    if (mDeviceHandle != nullptr && mReceiverThread == nullptr) {
-        mReceiverThread = std::make_shared<boost::thread>([&] {
+    if (mDeviceHandle != nullptr && mUSBThread == nullptr) {
+        mUSBReceiveThread = std::make_shared<USBReceiveThread>(*mIncomingConnection);
+        mUSBReceiveThread->StartThread();
+
+        mUSBSendThread = std::make_shared<USBSendThread>();
+        mUSBSendThread->StartThread();
+
+        mUSBThread = std::make_shared<boost::thread>([&] {
             // If we didn't get a graceful disconnect retry making connection.
-            while ((mDeviceHandle != nullptr) || mRetryCounter > 0) {
+            while ((mDeviceHandlUSBReceiveThreade != nullptr) || mRetryCounter > 0) {
                 if (mAwaitClose) {
                     HandleClose();
                 } else {

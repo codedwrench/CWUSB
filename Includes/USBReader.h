@@ -5,6 +5,7 @@
  * This file contains the header for a USBReader class which will be used to read/write data from/to the PSP.
  *
  * */
+
 #include <array>
 #include <iostream>
 #include <mutex>
@@ -78,7 +79,6 @@ public:
 private:
     bool USBCheckDevice();
     void HandleAsynchronous(USB_Constants::AsyncCommand& aData, int aLength);
-    void HandleAsynchronousData(USB_Constants::AsyncCommand& aData, int aLength);
     void HandleAsynchronousSend();
     void HandleClose();
     void HandleError();
@@ -87,18 +87,12 @@ private:
 
     /** True: program starts stitching packets. **/
     bool                            mReceiveStitching{false};
-    ArrayWithLength                 mAsyncReceiveBuffer{};
     std::array<char, cMaxUSBBuffer> mTemporaryReceiveBuffer{0};
 
-    bool mAwaitClose{false};
+    bool mStopRequest{false};
 
     /** True: program starts stitching packets. **/
     bool                        mSendStitching{false};
-    std::queue<ArrayWithLength> mAsyncSendBuffer{};
-    std::mutex                  mAsyncSendBufferMutex{};  //< 2 threads are accessing this.
-    ArrayWithLength             mPacketToSend{};
-    ArrayWithLength             mLastAddedPacket{};
-    unsigned int                mBytesSent{0};
 
     libusb_device_handle*               mDeviceHandle{nullptr};
     bool                                mError{false};
@@ -110,6 +104,5 @@ private:
 
     int mRetryCounter{0};
 
-    int  mActualPacketLength{0};  //< returned by PSP when receiving a netpacket.
     bool mUSBCheckSuccessful{false};
 };

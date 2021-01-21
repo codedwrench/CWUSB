@@ -87,8 +87,8 @@ void USBReader::Close()
 {
     // Close thread nicely
     if (mUSBThread != nullptr && !mUSBThread->joinable()) {
-        mAwaitClose = true;
-        while (mAwaitClose) {
+        mStopRequest = true;
+        while (mStopRequest) {
             std::this_thread::sleep_for(1s);
         }
         mUSBThread->join();
@@ -100,68 +100,48 @@ void USBReader::Close()
 
 void USBReader::HandleAsynchronous(AsyncCommand& aData, int aLength)
 {
-    // This is actually the channel, for now we'll capture all
     if (aData.channel == cAsyncUserChannel) {
-        if (mReceiveStitching) {
-            HandleStitch(aData, aLength);
+        int lPacketMode{IsDebugPrintCommand(aData, aLength)};
+
+        if (lPacketMode > 0) {
+            // We know it's a DebugPrint command, so we can skip past this header as well now
+            unsigned int lLength = aLength - cAsyncHeaderAndSubHeaderSize;
+            unsigned int lActualPacketLength{0};
+            USB_Constants::BinaryStitchUSBPacket lPacket{};
+
+            // We are a packet, so we can check if we can send it off
+            switch (lPacketMode) {
+                case cAsyncModePacket:
+                    // Grab the packet length from the packet
+                    lPacket.stitch = lActualPacketLength > USB_Constants::cMaxUSBPacketSize;
+                    mReceiveStitching = lPacket.stitch;
+
+                    // Skip headers already
+                    lPacket.length = aLength - cAsyncHeaderAndSubHeaderSize;
+                    memcpy(lPacket.data.data(),
+                           reinterpret_cast<char*>(&aData) + cAsyncHeaderAndSubHeaderSize,
+                           lPacket.length);
+
+                    mUSBReceiveThread->AddToQueue(lPacket);
+                    break;
+                case cAsyncModeDebug:
+                    // We can just go ahead and print the debug data, I'm assuming it will never go past 512 bytes. If
+                    // it does, we'll see when we get there :|
+                    Logger::GetInstance().Log("PSP: " + std::string(lData, lLength), Logger::Level::DEBUG);
+                    break;
+
+                default:
+                    // Don't know what we got
+                    char* lData{reinterpret_cast<char*>(&aData)};
+                    Logger::GetInstance().Log("Unknown data:" + PrettyHexString(std::string(lData, mLength)),
+                                              Logger::Level::DEBUG);
+            }
         } else {
-            HandleAsynchronousData(aData, aLength);
+            // Don't know what we got
+            char* lData{reinterpret_cast<char*>(&aData)};
+            Logger::GetInstance().Log("Unknown data:" + PrettyHexString(std::string(lData, mLength)),
+                                      Logger::Level::DEBUG);
         }
-    } else {
-        // Don't know what we got
-        char* lData{reinterpret_cast<char*>(&aData)};
-        Logger::GetInstance().Log("Unknown data:" + PrettyHexString(std::string(lData, mLength)), Logger::Level::DEBUG);
-    }
-}
-
-void USBReader::HandleAsynchronousData(AsyncCommand& aData, int aLength)
-{
-    int lPacketMode{IsDebugPrintCommand(aData, aLength)};
-
-    if (lPacketMode > 0) {
-        // We know it's a DebugPrint command, so we can skip past this header as well now
-        unsigned int lLength = aLength - cAsyncHeaderAndSubHeaderSize;
-
-        std::string lData{reinterpret_cast<char*>(&aData) + cAsyncHeaderAndSubHeaderSize, static_cast<size_t>(lLength)};
-
-        // We are a packet, so we can check if we can send it off
-
-        switch (lPacketMode) {
-            case cAsyncModePacket:
-                // Grab the packet length from the packet
-                mActualPacketLength =
-                    (reinterpret_cast<AsyncSubHeader*>(reinterpret_cast<char*>(&aData) + cAsyncHeaderSize))->size;
-
-                // It fits within the standard USB buffer, nothing special needs to be done!
-                if (mActualPacketLength <= cMaxUSBPacketSize - cAsyncHeaderAndSubHeaderSize) {
-                    mIncomingConnection->Send(lData);
-
-                } else {
-                    // It does not fit within the standard USB buffer, let's get stitchin'!
-                    mReceiveStitching = true;
-                    lData.copy(static_cast<char*>(mAsyncReceiveBuffer.first.data()), lLength, 0);
-
-                    // Not sure if std::array::size() will be reliable when we will the thing
-                    // with zeroes
-                    mAsyncReceiveBuffer.second = lLength;
-                }
-                break;
-            case cAsyncModeDebug:
-                // We can just go ahead and print the debug data, I'm assuming it will never go past 512 bytes. If it
-                // does, we'll see when we get there :|
-                Logger::GetInstance().Log("PSP: " + std::string(lData, lLength), Logger::Level::DEBUG);
-                break;
-
-            default:
-                // Don't know what we got
-                char* lData{reinterpret_cast<char*>(&aData)};
-                Logger::GetInstance().Log("Unknown data:" + PrettyHexString(std::string(lData, mLength)),
-                                          Logger::Level::DEBUG);
-        }
-    } else {
-        // Don't know what we got
-        char* lData{reinterpret_cast<char*>(&aData)};
-        Logger::GetInstance().Log("Unknown data:" + PrettyHexString(std::string(lData, mLength)), Logger::Level::DEBUG);
     }
 }
 
@@ -218,7 +198,7 @@ void USBReader::HandleAsynchronousSend()
             ArrayWithLength().swap(mPacketToSend);
             mBytesSent = 0;
         }
-        if (USBBulkWrite(0x3, lPacket.data(), lPacketSize, 1) == -1) {
+        if (USBBulkWrite(cUSBDataWriteEndpoint, lPacket.data(), lPacketSize, cMaxUSBWriteTimeOut) == -1) {
             mError = true;
         }
     }
@@ -233,7 +213,7 @@ void USBReader::HandleClose()
         libusb_close(mDeviceHandle);
         mDeviceHandle = nullptr;
     }
-    mAwaitClose = false;
+    mStopRequest = false;
 }
 
 void USBReader::HandleError()
@@ -249,41 +229,11 @@ void USBReader::HandleError()
     mReceiveStitching = false;
     mSendStitching    = false;
 
-    mAsyncSendBufferMutex.lock();
-    std::queue<ArrayWithLength>().swap(mAsyncSendBuffer);
-    mAsyncSendBufferMutex.unlock();
-
-    ArrayWithLength().swap(mPacketToSend);
-    mBytesSent = 0;
+    mUSBSendThread->ClearQueues();
+    mUSBReceiveThread->ClearQueues();
 
     Logger::GetInstance().Log("Ran into a snag, restarting stack!", Logger::Level::WARNING);
     std::this_thread::sleep_for(100ms);
-}
-
-void USBReader::HandleStitch(AsyncCommand& aData, int aLength)
-{
-    int lLength{aLength};
-    // Lets continue stitching
-    // If we are stitching, the size should be bigger than the command
-    if (lLength > cAsyncHeaderSize) {
-        // Focus on the data part
-        std::string lData{reinterpret_cast<char*>(&aData) + cAsyncHeaderSize, lLength - cAsyncHeaderSize};
-
-        lData.copy(mAsyncReceiveBuffer.first.data() + mAsyncReceiveBuffer.second, mAsyncReceiveBuffer.second, 0);
-        mAsyncReceiveBuffer.second += lLength - static_cast<int>(cAsyncHeaderSize);
-
-        // If we are smaller than the max USB packet size, we are done and we can send the packet on its merry way
-        if (mAsyncReceiveBuffer.second >= mActualPacketLength) {
-            // This can be sent to XLink Kai
-            mIncomingConnection->Send(std::string(mAsyncReceiveBuffer.first.data(), mAsyncReceiveBuffer.second));
-            mAsyncReceiveBuffer.second = 0;
-            mReceiveStitching          = false;
-        }
-    } else {
-        // Don't know what we got
-        char* lData{reinterpret_cast<char*>(&aData)};
-        Logger::GetInstance().Log("Unknown data:" + PrettyHexString(std::string(lData, mLength)), Logger::Level::DEBUG);
-    }
 }
 
 bool USBReader::Open()
@@ -397,7 +347,7 @@ bool USBReader::USBCheckDevice()
 
     if (mDeviceHandle != nullptr) {
         int lMagic  = HostFS;
-        int lLength = USBBulkWrite(2, reinterpret_cast<char*>(&lMagic), sizeof(int), 1000);
+        int lLength = USBBulkWrite(cUSBHelloEndpoint, reinterpret_cast<char*>(&lMagic), sizeof(int), 1000);
         if (lLength != sizeof(int)) {
             Logger::GetInstance().Log(std::string("Amount of bytes written did not match: ") + std::to_string(lLength),
                                       Logger::Level::WARNING);
@@ -469,8 +419,8 @@ bool USBReader::StartReceiverThread()
 
         mUSBThread = std::make_shared<boost::thread>([&] {
             // If we didn't get a graceful disconnect retry making connection.
-            while ((mDeviceHandlUSBReceiveThreade != nullptr) || mRetryCounter > 0) {
-                if (mAwaitClose) {
+            while ((mDeviceHandle != nullptr) || mRetryCounter > 0) {
+                if (mStopRequest) {
                     HandleClose();
                 } else {
                     if (!mUSBCheckSuccessful) {
@@ -487,7 +437,7 @@ bool USBReader::StartReceiverThread()
 
                     if (!mSendStitching) {
                         // First read, then write
-                        int lLength{USBBulkRead(0x81, 512, 1)};
+                        int lLength{USBBulkRead(cUSBDataReadEndpoint, cMaxUSBPacketSize, cMaxUSBReadTimeOut)};
                         if (lLength > 0) {
                             mLength = lLength;
                             ReceiveCallback();

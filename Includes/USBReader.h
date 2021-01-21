@@ -16,11 +16,6 @@
 
 #include "USBConstants.h"
 
-constexpr int cMaxUSBBuffer = 512;
-
-// The maximum 802.11 MTU is 2304 bytes. 802.11-2012, page 413, section 8.3.2.1
-constexpr int cMaxAsynchronousBuffer = 2304;
-
 struct libusb_device_handle;
 class USBReceiveThread;
 class USBSendThread;

@@ -9,9 +9,14 @@
 #include <string>
 
 #include <boost/asio.hpp>
-#include <boost/thread.hpp>
 
 #include "USBReader.h"
+
+namespace boost
+{
+    class thread;
+}
+
 namespace XLinkKai_Constants
 {
     static constexpr int                  cMaxLength{4096};

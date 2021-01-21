@@ -2,6 +2,8 @@
 
 /* Copyright (c) 2021 [Rick de Bondt] - USBSendThread.cpp */
 
+#include <boost/thread.hpp>
+
 #include "../Includes/Logger.h"
 #include "../Includes/XLinkKaiConnection.h"
 

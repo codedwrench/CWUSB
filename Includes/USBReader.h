@@ -12,9 +12,12 @@
 #include <queue>
 #include <string_view>
 
-#include <boost/thread.hpp>
-
 #include "USBConstants.h"
+
+namespace boost
+{
+    class thread;
+}
 
 struct libusb_device_handle;
 class USBReceiveThread;

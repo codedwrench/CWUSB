@@ -14,15 +14,8 @@
 
 // Not needed for this file but xlinkconnection needs it and this solves an ordering issue on windows
 #include <boost/asio.hpp>
+#include <boost/thread.hpp>
 #include <sys/types.h>
-
-#include <libusb.h>
-
-#include "../Includes/Logger.h"
-#include "../Includes/NetConversionFunctions.h"
-#include "../Includes/USBReceiveThread.h"
-#include "../Includes/USBSendThread.h"
-#include "../Includes/XLinkKaiConnection.h"
 
 // This garbage is needed for it to compile when building statically
 #ifdef BUILD_STATIC
@@ -36,6 +29,14 @@ extern "C" {
 #endif
 #endif
 #endif
+
+#include <libusb.h>
+
+#include "../Includes/Logger.h"
+#include "../Includes/NetConversionFunctions.h"
+#include "../Includes/USBReceiveThread.h"
+#include "../Includes/USBSendThread.h"
+#include "../Includes/XLinkKaiConnection.h"
 
 #if defined(_MSC_VER) && defined(__MINGW32__)
 #include <hidclass.h>

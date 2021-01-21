@@ -7,6 +7,9 @@
 #include <iostream>
 #include <utility>
 
+#include <boost/asio.hpp>
+#include <boost/thread.hpp>
+
 #include "../Includes/Logger.h"
 #include "../Includes/NetConversionFunctions.h"
 

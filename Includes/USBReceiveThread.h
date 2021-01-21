@@ -8,9 +8,12 @@
 #include <memory>
 #include <mutex>
 
-#include <boost/thread.hpp>
-
 #include "USBConstants.h"
+
+namespace boost
+{
+    class thread;
+}
 
 namespace USBReceiveThread_Constants
 {

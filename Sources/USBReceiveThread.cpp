@@ -28,8 +28,7 @@ bool USBReceiveThread::StartThread()
                     // If there is a message available and it is unique, add it
                     if (lFrontOfQueue.length < 300 ||
                         (lFrontOfQueue.length != mLastReceivedMessage.length) &&
-                        (lFrontOfQueue.data.data() != mLastReceivedMessage.data.data())) {
-                        bool lUseLastReceived{false};
+                            (lFrontOfQueue.data.data() != mLastReceivedMessage.data.data())) {
                         // If the last message was too big for the USB-buffer, append the current one.
                         if (mLastReceivedMessage.stitch) {
                             memcpy(mLastReceivedMessage.data.data() + mLastReceivedMessage.length,
@@ -37,28 +36,23 @@ bool USBReceiveThread::StartThread()
                                    lFrontOfQueue.length);
 
                             mLastReceivedMessage.length += lFrontOfQueue.length;
-                            lUseLastReceived = true;
-                        } 
+                            mLastReceivedMessage.stitch = lFrontOfQueue.stitch;
+
+                        } else {
+                            // Replace last received since the previous one wasn't a stitch packet
+                            memcpy(mLastReceivedMessage.data.data(), lFrontOfQueue.data.data(), lFrontOfQueue.length);
+
+                            mLastReceivedMessage.length = lFrontOfQueue.length;
+                            mLastReceivedMessage.stitch = lFrontOfQueue.stitch;
+                        }
 
                         if (!lFrontOfQueue.stitch) {
-                            // If we just finished our last message, use that, if this is a totally new message, use the
-                            // front of queue.
-                            if (lUseLastReceived) {
-                                if (mLastReceivedMessage.length != mLastCompleteMessage.length &&
-                                    mLastReceivedMessage.data != mLastCompleteMessage.data) {
-                                    mLastCompleteMessage = mLastReceivedMessage;
-                                    mConnection.Send(std::string_view(mLastReceivedMessage.data.data(),
-                                                                      mLastReceivedMessage.length));
-                                }
-                            // 300 is possibly a good cutoff point for broadcast messages, remains to be seen
-                            } else if (lFrontOfQueue.length < 300 || (lFrontOfQueue.length != mLastCompleteMessage.length &&
-                                       memcmp(lFrontOfQueue.data.data(),
-                                              mLastCompleteMessage.data.data(),
-                                              lFrontOfQueue.length) != 0)) {
-                                memcpy(
-                                    mLastCompleteMessage.data.data(), lFrontOfQueue.data.data(), lFrontOfQueue.length);
-                                mLastCompleteMessage.length = lFrontOfQueue.length;
-                                mConnection.Send(std::string_view(lFrontOfQueue.data.data(), lFrontOfQueue.length));
+                            if ((lFrontOfQueue.length < 300) ||
+                                (mLastReceivedMessage.length != mLastCompleteMessage.length &&
+                                 mLastReceivedMessage.data != mLastCompleteMessage.data)) {
+                                mLastCompleteMessage = mLastReceivedMessage;
+                                mConnection.Send(
+                                    std::string_view(mLastReceivedMessage.data.data(), mLastReceivedMessage.length));
                             }
                         }
                     }

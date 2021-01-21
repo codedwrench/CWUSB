@@ -23,7 +23,8 @@
 #pragma comment(lib, "legacy_stdio_definitions.lib")
 #ifdef __cplusplus
 FILE iob[] = {*stdin, *stdout, *stderr};
-extern "C" {
+extern "C"
+{
     FILE* __cdecl _iob(void) { return iob; }
 }
 #endif
@@ -111,47 +112,61 @@ void USBReader::Close()
 void USBReader::HandleAsynchronous(AsyncCommand& aData, int aLength)
 {
     if (aData.channel == cAsyncUserChannel) {
-        int lPacketMode{IsDebugPrintCommand(aData, aLength)};
+        BinaryStitchUSBPacket lPacket{};
+        if (!mReceiveStitching) {
+            int lPacketMode{IsDebugPrintCommand(aData, aLength)};
 
-        if (lPacketMode > 0) {
-            // We know it's a DebugPrint command, so we can skip past this header as well now
-            unsigned int          lLength = aLength - cAsyncHeaderAndSubHeaderSize;
-            unsigned int          lActualPacketLength{0};
-            BinaryStitchUSBPacket lPacket{};
+            if (lPacketMode > 0) {
+                // We know it's a DebugPrint command, so we can skip past this header as well now
+                unsigned int lLength = aLength - cAsyncHeaderAndSubHeaderSize;
+                int          lActualPacketLength{0};
+                // We are a packet, so we can check if we can send it off
+                switch (lPacketMode) {
+                    case cAsyncModePacket:
+                        // Grab the packet length from the packet
+                        lActualPacketLength =
+                            reinterpret_cast<AsyncSubHeader*>(reinterpret_cast<char*>(&aData) + cAsyncHeaderSize)->size;
 
-            // We are a packet, so we can check if we can send it off
-            switch (lPacketMode) {
-                case cAsyncModePacket:
-                    // Grab the packet length from the packet
-                    lPacket.stitch    = lActualPacketLength > cMaxUSBPacketSize;
-                    mReceiveStitching = lPacket.stitch;
+                        lPacket.stitch    = lActualPacketLength > (cMaxUSBPacketSize - cAsyncHeaderAndSubHeaderSize);
+                        mReceiveStitching = lPacket.stitch;
 
-                    // Skip headers already
-                    lPacket.length = aLength - cAsyncHeaderAndSubHeaderSize;
-                    memcpy(lPacket.data.data(),
-                           reinterpret_cast<char*>(&aData) + cAsyncHeaderAndSubHeaderSize,
-                           lPacket.length);
+                        // Skip headers already
+                        lPacket.length = aLength - cAsyncHeaderAndSubHeaderSize;
+                        memcpy(lPacket.data.data(),
+                               reinterpret_cast<char*>(&aData) + cAsyncHeaderAndSubHeaderSize,
+                               lPacket.length);
 
-                    mUSBReceiveThread->AddToQueue(lPacket);
-                    break;
-                case cAsyncModeDebug:
-                    // We can just go ahead and print the debug data, I'm assuming it will never go past 512 bytes. If
-                    // it does, we'll see when we get there :|
-                    Logger::GetInstance().Log(
-                        "PSP: " + std::string(reinterpret_cast<char*>(&aData) + cAsyncHeaderAndSubHeaderSize, lLength),
-                        Logger::Level::DEBUG);
-                    break;
-                default:
-                    // Don't know what we got
-                    Logger::GetInstance().Log(
-                        "Unknown data:" + PrettyHexString(std::string(reinterpret_cast<char*>(&aData), mLength)),
-                        Logger::Level::DEBUG);
+                        mUSBReceiveThread->AddToQueue(lPacket);
+                        break;
+                    case cAsyncModeDebug:
+                        // We can just go ahead and print the debug data, I'm assuming it will never go past 512 bytes.
+                        // If it does, we'll see when we get there :|
+                        Logger::GetInstance().Log(
+                            "PSP: " +
+                                std::string(reinterpret_cast<char*>(&aData) + cAsyncHeaderAndSubHeaderSize, lLength),
+                            Logger::Level::DEBUG);
+                        break;
+                    default:
+                        // Don't know what we got
+                        Logger::GetInstance().Log(
+                            "Unknown data:" + PrettyHexString(std::string(reinterpret_cast<char*>(&aData), mLength)),
+                            Logger::Level::DEBUG);
+                }
+            } else {
+                // Don't know what we got
+                Logger::GetInstance().Log(
+                    "Unknown data:" + PrettyHexString(std::string(reinterpret_cast<char*>(&aData), mLength)),
+                    Logger::Level::DEBUG);
             }
         } else {
-            // Don't know what we got
-            Logger::GetInstance().Log(
-                "Unknown data:" + PrettyHexString(std::string(reinterpret_cast<char*>(&aData), mLength)),
-                Logger::Level::DEBUG);
+            lPacket.stitch       = aLength > (cMaxUSBPacketSize - cAsyncHeaderSize);
+            mReceiveStitching    = lPacket.stitch;
+
+            // Skip headers already
+            lPacket.length = aLength - cAsyncHeaderSize;
+            memcpy(lPacket.data.data(), reinterpret_cast<char*>(&aData) + cAsyncHeaderSize, lPacket.length);
+
+            mUSBReceiveThread->AddToQueue(lPacket);
         }
     }
 }

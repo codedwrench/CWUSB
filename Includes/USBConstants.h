@@ -20,9 +20,8 @@
 #pragma once
 
 #include <array>
+#include <cstdint>
 #include <queue>
-
-#include <stdint.h>
 
 #ifdef __GNUC__
 #define PACK(__Declaration__) __Declaration__ __attribute__((__packed__))

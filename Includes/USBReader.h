@@ -80,8 +80,8 @@ private:
     int  SendHello();
 
     /** True: program starts stitching packets. **/
-    bool                            mReceiveStitching{false};
-    std::array<char, cMaxUSBBuffer> mTemporaryReceiveBuffer{0};
+    bool                                               mReceiveStitching{false};
+    std::array<char, USB_Constants::cMaxUSBPacketSize> mTemporaryReceiveBuffer{0};
 
     bool mStopRequest{false};
 

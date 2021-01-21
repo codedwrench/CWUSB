@@ -30,8 +30,8 @@ bool USBSendThread::StartThread()
                         USB_Constants::BinaryStitchUSBPacket lPacket{};
                         unsigned int lHeaderLength = mLastPacketStitched ? USB_Constants::cAsyncHeaderSize :
                                                                            USB_Constants::cAsyncHeaderAndSubHeaderSize;
-                        lPacket.stitch             = lFrontOfQueue.length > (cMaxUSBBuffer - lHeaderLength);
-                        int lLength{lPacket.stitch ? cMaxUSBBuffer : lFrontOfQueue.length};
+                        lPacket.stitch = lFrontOfQueue.length > (USB_Constants::cMaxUSBPacketSize - lHeaderLength);
+                        unsigned int lLength{lPacket.stitch ? USB_Constants::cMaxUSBPacketSize : lFrontOfQueue.length};
 
                         // First add the packet header
                         USB_Constants::AsyncCommand lCommand{};

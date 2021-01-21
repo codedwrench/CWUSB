@@ -20,9 +20,9 @@
 
 #include "../Includes/Logger.h"
 #include "../Includes/NetConversionFunctions.h"
-#include "../Includes/XLinkKaiConnection.h"
 #include "../Includes/USBReceiveThread.h"
 #include "../Includes/USBSendThread.h"
+#include "../Includes/XLinkKaiConnection.h"
 
 // This garbage is needed for it to compile when building statically
 #ifdef BUILD_STATIC
@@ -114,8 +114,8 @@ void USBReader::HandleAsynchronous(AsyncCommand& aData, int aLength)
 
         if (lPacketMode > 0) {
             // We know it's a DebugPrint command, so we can skip past this header as well now
-            unsigned int                         lLength = aLength - cAsyncHeaderAndSubHeaderSize;
-            unsigned int                         lActualPacketLength{0};
+            unsigned int          lLength = aLength - cAsyncHeaderAndSubHeaderSize;
+            unsigned int          lActualPacketLength{0};
             BinaryStitchUSBPacket lPacket{};
 
             // We are a packet, so we can check if we can send it off
@@ -136,18 +136,21 @@ void USBReader::HandleAsynchronous(AsyncCommand& aData, int aLength)
                 case cAsyncModeDebug:
                     // We can just go ahead and print the debug data, I'm assuming it will never go past 512 bytes. If
                     // it does, we'll see when we get there :|
-                    Logger::GetInstance().Log("PSP: " + std::string(reinterpret_cast<char*>(&aData) + cAsyncHeaderAndSubHeaderSize, lLength), Logger::Level::DEBUG);
+                    Logger::GetInstance().Log(
+                        "PSP: " + std::string(reinterpret_cast<char*>(&aData) + cAsyncHeaderAndSubHeaderSize, lLength),
+                        Logger::Level::DEBUG);
                     break;
                 default:
                     // Don't know what we got
-                    Logger::GetInstance().Log("Unknown data:" + PrettyHexString(std::string(reinterpret_cast<char*>(&aData), mLength)),
-                                              Logger::Level::DEBUG);
+                    Logger::GetInstance().Log(
+                        "Unknown data:" + PrettyHexString(std::string(reinterpret_cast<char*>(&aData), mLength)),
+                        Logger::Level::DEBUG);
             }
         } else {
             // Don't know what we got
-            char* lData{reinterpret_cast<char*>(&aData)};
-            Logger::GetInstance().Log("Unknown data:" + PrettyHexString(std::string(lData, mLength)),
-                                      Logger::Level::DEBUG);
+            Logger::GetInstance().Log(
+                "Unknown data:" + PrettyHexString(std::string(reinterpret_cast<char*>(&aData), mLength)),
+                Logger::Level::DEBUG);
         }
     }
 }
@@ -156,7 +159,7 @@ void USBReader::HandleAsynchronousSend()
 {
     if (mUSBSendThread->HasOutgoingData()) {
         BinaryStitchUSBPacket lFormattedPacket = mUSBSendThread->PopFromOutgoingQueue();
-        mSendStitching                                        = lFormattedPacket.stitch;
+        mSendStitching                         = lFormattedPacket.stitch;
         if (USBBulkWrite(
                 cUSBDataWriteEndpoint, lFormattedPacket.data.data(), lFormattedPacket.length, cMaxUSBWriteTimeOut) ==
             -1) {
@@ -272,12 +275,13 @@ void USBReader::SetIncomingConnection(std::shared_ptr<XLinkKaiConnection> aDevic
 int USBReader::USBBulkRead(int aEndpoint, int aSize, int aTimeOut)
 {
     int lReturn{-1};
-    int lError = libusb_bulk_transfer(mDeviceHandle,
-                                      aEndpoint,
-                                      reinterpret_cast<unsigned char*>(mTemporaryReceiveBuffer.data()),
-                                      aSize,
-                                      &lReturn,
-                                      aTimeOut);
+    int lError{0};
+    lError = libusb_bulk_transfer(mDeviceHandle,
+                                  aEndpoint,
+                                  reinterpret_cast<unsigned char*>(mTemporaryReceiveBuffer.data()),
+                                  aSize,
+                                  &lReturn,
+                                  aTimeOut);
     if (lError != 0) {
         lReturn = lError;
     }
@@ -403,9 +407,7 @@ bool USBReader::StartReceiverThread()
                         if (lLength > 0) {
                             mLength = lLength;
                             ReceiveCallback();
-                        } else if (lLength == LIBUSB_ERROR_TIMEOUT) {
-                            // Ignore, we're expecting this
-                        } else if (lLength == LIBUSB_ERROR_BUSY) {
+                        } else if (lLength == LIBUSB_ERROR_TIMEOUT || lLength == LIBUSB_ERROR_BUSY) {
                             // Ignore, we're expecting this
                         } else {
                             // Probably fatal, try a restart of the device

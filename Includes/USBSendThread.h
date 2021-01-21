@@ -64,7 +64,6 @@ private:
     bool                                             mError{false};
     std::mutex                                       mMutex{};
     USB_Constants::BinaryWiFiPacket                  mLastReceivedPacket{};
-    bool                                             mLastPacketStitched{};
     std::queue<USB_Constants::BinaryWiFiPacket>      mQueue{};
     std::queue<USB_Constants::BinaryStitchUSBPacket> mOutgoingQueue{};
     bool                                             mStopRequest{false};

@@ -26,7 +26,8 @@ bool USBReceiveThread::StartThread()
                     mMutex.unlock();
 
                     // If there is a message available and it is unique, add it
-                    if ((lFrontOfQueue.length != mLastReceivedMessage.length) &&
+                    if (lFrontOfQueue.length < 300 ||
+                        (lFrontOfQueue.length != mLastReceivedMessage.length) &&
                         (lFrontOfQueue.data.data() != mLastReceivedMessage.data.data())) {
                         bool lUseLastReceived{false};
                         // If the last message was too big for the USB-buffer, append the current one.
@@ -37,12 +38,7 @@ bool USBReceiveThread::StartThread()
 
                             mLastReceivedMessage.length += lFrontOfQueue.length;
                             lUseLastReceived = true;
-                        } else {
-                            // Normally this does not happen
-                            Logger::GetInstance().Log("Something went wrong when stitching", Logger::Level::WARNING);
-                            mLastCompleteMessage = mLastReceivedMessage;
-                            mLastReceivedMessage = {};
-                        }
+                        } 
 
                         if (!lFrontOfQueue.stitch) {
                             // If we just finished our last message, use that, if this is a totally new message, use the
@@ -54,10 +50,11 @@ bool USBReceiveThread::StartThread()
                                     mConnection.Send(std::string_view(mLastReceivedMessage.data.data(),
                                                                       mLastReceivedMessage.length));
                                 }
-                            } else if (lFrontOfQueue.length != mLastCompleteMessage.length &&
+                            // 300 is possibly a good cutoff point for broadcast messages, remains to be seen
+                            } else if (lFrontOfQueue.length < 300 || (lFrontOfQueue.length != mLastCompleteMessage.length &&
                                        memcmp(lFrontOfQueue.data.data(),
                                               mLastCompleteMessage.data.data(),
-                                              lFrontOfQueue.length) != 0) {
+                                              lFrontOfQueue.length) != 0)) {
                                 memcpy(
                                     mLastCompleteMessage.data.data(), lFrontOfQueue.data.data(), lFrontOfQueue.length);
                                 mLastCompleteMessage.length = lFrontOfQueue.length;
@@ -69,7 +66,7 @@ bool USBReceiveThread::StartThread()
                     // Never forget to unlock a mutex
                     mMutex.unlock();
                 }
-                std::this_thread::sleep_for(std::chrono::microseconds(10));
+                std::this_thread::sleep_for(std::chrono::microseconds(1));
             }
             mDone = true;
         });

@@ -45,11 +45,23 @@ public:
      */
     void ClearQueues();
 
+    /**
+     * Checks if there is data in the queue.
+     * @return true if there is data.
+     */
+    bool HasOutgoingData();
+
+    /**
+     * Grabs a packet from the outgoing queue if the buffer is not empty.
+     */
+    USB_Constants::BinaryStitchUSBPacket PopFromOutgoingQueue();
+
 private:
     bool                                             mDone{true};
     bool                                             mError{false};
     std::mutex                                       mMutex{};
     USB_Constants::BinaryWiFiPacket                  mLastReceivedPacket{};
+    bool                                             mLastPacketStitched{};
     std::queue<USB_Constants::BinaryWiFiPacket>      mQueue{};
     std::queue<USB_Constants::BinaryStitchUSBPacket> mOutgoingQueue{};
     bool                                             mStopRequest{false};

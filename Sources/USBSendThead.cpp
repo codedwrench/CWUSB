@@ -25,15 +25,42 @@ bool USBSendThread::StartThread()
                     if ((lFrontOfQueue.length != mLastReceivedPacket.length) &&
                         (lFrontOfQueue.data != mLastReceivedPacket.data)) {
                         mLastReceivedPacket = lFrontOfQueue;
+                        int lPacketSize{0};
 
-                        // The length is too high, this needs to be split
                         USB_Constants::BinaryStitchUSBPacket lPacket{};
-                        lPacket.stitch = lFrontOfQueue.length > cMaxUSBBuffer ? cMaxUSBBuffer : lFrontOfQueue.length;
+                        unsigned int lHeaderLength = mLastPacketStitched ? USB_Constants::cAsyncHeaderSize :
+                                                                           USB_Constants::cAsyncHeaderAndSubHeaderSize;
+                        lPacket.stitch             = lFrontOfQueue.length > (cMaxUSBBuffer - lHeaderLength);
                         int lLength{lPacket.stitch ? cMaxUSBBuffer : lFrontOfQueue.length};
 
-                        memcpy(lPacket.data.data(), lFrontOfQueue.data.data(), lLength);
+                        // First add the packet header
+                        USB_Constants::AsyncCommand lCommand{};
+                        memset(&lCommand, 0, sizeof(lCommand));
+                        lCommand.channel = USB_Constants::cAsyncUserChannel;
+                        lCommand.magic   = USB_Constants::Asynchronous;
+
+                        memcpy(lPacket.data.data(), &lCommand, USB_Constants::cAsyncHeaderSize);
+                        lPacketSize += USB_Constants::cAsyncHeaderSize;
+
+                        // If we are not stitching we need to add a subheader
+                        if (!mLastPacketStitched) {
+                            USB_Constants::AsyncSubHeader lSubHeader{};
+                            memset(&lSubHeader, 0, USB_Constants::cAsyncSubHeaderSize);
+                            lSubHeader.magic = USB_Constants::DebugPrint;
+                            lSubHeader.mode  = 3;
+                            lSubHeader.ref   = 0;  // i don't know why this is 0
+                            lSubHeader.size  = lFrontOfQueue.length;
+                            Logger::GetInstance().Log("size = " + std::to_string(lFrontOfQueue.length),
+                                                      Logger::Level::TRACE);
+
+                            memcpy(lPacket.data.data() + lPacketSize, &lSubHeader, USB_Constants::cAsyncSubHeaderSize);
+                            lPacketSize += USB_Constants::cAsyncSubHeaderSize;
+                        }
+
+                        memcpy(lPacket.data.data() + lPacketSize, lFrontOfQueue.data.data(), lLength);
                         lPacket.length = lLength;
                         mOutgoingQueue.push(lPacket);
+                        mLastPacketStitched = lPacket.stitch;
                     }
                 } else {
                     // Never forget to unlock a mutex
@@ -77,7 +104,24 @@ bool USBSendThread::AddToQueue(std::string_view aData)
                                       Logger::Level::WARNING);
         }
     } else {
-        Logger::GetInstance().Log("Receivebuffer filled up!", Logger::Level::ERROR);
+        Logger::GetInstance().Log("Sendbuffer filled up!", Logger::Level::ERROR);
+    }
+    return lReturn;
+}
+
+bool USBSendThread::HasOutgoingData()
+{
+    return !mOutgoingQueue.empty();
+}
+
+USB_Constants::BinaryStitchUSBPacket USBSendThread::PopFromOutgoingQueue()
+{
+    USB_Constants::BinaryStitchUSBPacket lReturn{};
+    if (!mOutgoingQueue.empty()) {
+        mMutex.lock();
+        lReturn = mOutgoingQueue.front();
+        mOutgoingQueue.pop();
+        mMutex.unlock();
     }
     return lReturn;
 }

@@ -14,17 +14,16 @@
 
 #include <boost/thread.hpp>
 
-#include "../Includes/USBReceiveThread.h"
-#include "../Includes/USBSendThread.h"
+#include "USBConstants.h"
 
 constexpr int cMaxUSBBuffer = 512;
 
 // The maximum 802.11 MTU is 2304 bytes. 802.11-2012, page 413, section 8.3.2.1
 constexpr int cMaxAsynchronousBuffer = 2304;
 
-using ArrayWithLength = std::pair<std::array<char, cMaxAsynchronousBuffer>, int>;
-
 struct libusb_device_handle;
+class USBReceiveThread;
+class USBSendThread;
 class XLinkKaiConnection;
 
 class USBReader
@@ -92,7 +91,7 @@ private:
     bool mStopRequest{false};
 
     /** True: program starts stitching packets. **/
-    bool                        mSendStitching{false};
+    bool mSendStitching{false};
 
     libusb_device_handle*               mDeviceHandle{nullptr};
     bool                                mError{false};

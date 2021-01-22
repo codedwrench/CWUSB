@@ -5,6 +5,7 @@
  * for the PSP.
  **/
 
+#include <memory>
 #include <mutex>
 #include <queue>
 

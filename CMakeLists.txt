@@ -97,12 +97,14 @@ add_executable(PSPXLinkBridge main.cpp
         Sources/USBReceiveThread.cpp
         Sources/USBSendThead.cpp
         Sources/USBReader.cpp
+        Sources/Timer.cpp
         Includes/USBConstants.h
         Includes/Logger.h
         Includes/NetworkingHeaders.h
         Includes/XLinkKaiConnection.h
         Includes/NetConversionFunctions.h
         Includes/SettingsModel.h
+        Includes/Timer.h
         Includes/USBReceiveThread.h
         Includes/USBSendThread.h
         Includes/USBReader.h

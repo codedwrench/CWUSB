@@ -28,8 +28,8 @@ namespace XLinkKai_Constants
     static constexpr std::string_view     cDisconnectFormat{"disconnect"};
     static constexpr std::string_view     cDisconnectedFormat{"disconnected"};
     static constexpr std::string_view     cEthernetDataFormat{"e"};
-    static constexpr std::string_view     cLocallyUniqueName{"USB_PSP"};
-    static constexpr std::string_view     cEmulatorName{"USB_PSP"};
+    static constexpr std::string_view     cLocallyUniqueName{"CWUSB"};
+    static constexpr std::string_view     cEmulatorName{"CWUSB_PSP"};
     static constexpr unsigned int         cPort{34523};
     static constexpr std::chrono::seconds cConnectionTimeout{10};
     static constexpr std::chrono::seconds cKeepAliveTimeout{60};

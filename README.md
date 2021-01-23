@@ -1,4 +1,4 @@
-# PSPXLinkBridge
+# CWUSB
 This application bridges a PSP to XLink Kai via DDS using the adhocredirector plugin. 
 For now only USB is supported.
 

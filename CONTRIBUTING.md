@@ -1,4 +1,4 @@
-# Contributing to mondevtopromisc
+# Contributing to CWUSB
 
 Thanks for wanting to contribute! It's really appreciated.
 

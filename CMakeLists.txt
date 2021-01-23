@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.15)
-project(PSPXLinkBridge)
+project(CWUSB)
 set(CMAKE_VERBOSE_MAKEFILE ON)
 set(CMAKE_MODULE_PATH
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
@@ -90,7 +90,7 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/cnf/config.txt
      DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 	
 # TODO: Make this search for source files automatically, this is very ugly!
-add_executable(PSPXLinkBridge main.cpp
+add_executable(CWUSB main.cpp
         Sources/Logger.cpp
         Sources/SettingsModel.cpp
         Sources/XLinkKaiConnection.cpp
@@ -114,7 +114,7 @@ if (BUILD_STATIC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static")
 endif ()
 
-target_include_directories(PSPXLinkBridge PRIVATE ${LIBUSB_INCLUDE_DIR} ${Boost_INCLUDE_DIR})
-target_link_libraries(PSPXLinkBridge PRIVATE ${Boost_LIBRARIES} ${LIBUSB_LIBRARIES} ${PLATFORM_SPECIFIC_LIBRARIES})
+target_include_directories(CWUSB PRIVATE ${LIBUSB_INCLUDE_DIR} ${Boost_INCLUDE_DIR})
+target_link_libraries(CWUSB PRIVATE ${Boost_LIBRARIES} ${LIBUSB_LIBRARIES} ${PLATFORM_SPECIFIC_LIBRARIES})
 
 

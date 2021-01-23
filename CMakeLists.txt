@@ -79,7 +79,7 @@ else ()
 endif ()
 
 if (BUILD_STATIC)
-    if (NOT MSYS OR MINGW)
+    if (NOT MSVC OR MSYS OR MINGW)
         message("Building statically, please set your paths to the correct ones")
         set(BOOST_ROOT "/home/codedwrench/src/boost")
         set(Boost_LIBRARY_DIR "/home/codedwrench/src/boost/stage/lib")

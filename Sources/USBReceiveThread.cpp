@@ -26,29 +26,28 @@ bool USBReceiveThread::StartThread()
                     mMutex.unlock();
 
 
-                        // If the last message was too big for the USB-buffer, append the current one.
-                        if (mLastReceivedMessage.stitch) {
-                            memcpy(mLastReceivedMessage.data.data() + mLastReceivedMessage.length,
-                                   lFrontOfQueue.data.data(),
-                                   lFrontOfQueue.length);
+                    // If the last message was too big for the USB-buffer, append the current one.
+                    if (mLastReceivedMessage.stitch) {
+                        memcpy(mLastReceivedMessage.data.data() + mLastReceivedMessage.length,
+                               lFrontOfQueue.data.data(),
+                               lFrontOfQueue.length);
 
-                            mLastReceivedMessage.length += lFrontOfQueue.length;
-                            mLastReceivedMessage.stitch = lFrontOfQueue.stitch;
+                        mLastReceivedMessage.length += lFrontOfQueue.length;
+                        mLastReceivedMessage.stitch = lFrontOfQueue.stitch;
 
-                        } else {
-                            // Replace last received since the previous one wasn't a stitch packet
-                            memcpy(mLastReceivedMessage.data.data(), lFrontOfQueue.data.data(), lFrontOfQueue.length);
+                    } else {
+                        // Replace last received since the previous one wasn't a stitch packet
+                        memcpy(mLastReceivedMessage.data.data(), lFrontOfQueue.data.data(), lFrontOfQueue.length);
 
-                            mLastReceivedMessage.length = lFrontOfQueue.length;
-                            mLastReceivedMessage.stitch = lFrontOfQueue.stitch;
-                        }
+                        mLastReceivedMessage.length = lFrontOfQueue.length;
+                        mLastReceivedMessage.stitch = lFrontOfQueue.stitch;
+                    }
 
-                        if (!lFrontOfQueue.stitch) {
-
-                                mLastCompleteMessage = mLastReceivedMessage;
-                                mConnection.Send(
-                                    std::string_view(mLastReceivedMessage.data.data(), mLastReceivedMessage.length));
-                        }
+                    if (!lFrontOfQueue.stitch) {
+                        mLastCompleteMessage = mLastReceivedMessage;
+                        mConnection.Send(
+                            std::string_view(mLastReceivedMessage.data.data(), mLastReceivedMessage.length));
+                    }
                 } else {
                     // Never forget to unlock a mutex
                     mMutex.unlock();

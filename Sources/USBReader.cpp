@@ -22,8 +22,7 @@
 #pragma comment(lib, "legacy_stdio_definitions.lib")
 #ifdef __cplusplus
 FILE iob[] = {*stdin, *stdout, *stderr};
-extern "C"
-{
+extern "C" {
     FILE* __cdecl _iob(void) { return iob; }
 }
 #endif
@@ -158,8 +157,8 @@ void USBReader::HandleAsynchronous(AsyncCommand& aData, int aLength)
                     Logger::Level::DEBUG);
             }
         } else {
-            lPacket.stitch       = aLength > (cMaxUSBPacketSize - cAsyncHeaderSize);
-            mReceiveStitching    = lPacket.stitch;
+            lPacket.stitch    = aLength > (cMaxUSBPacketSize - cAsyncHeaderSize);
+            mReceiveStitching = lPacket.stitch;
 
             // Skip headers already
             lPacket.length = aLength - cAsyncHeaderSize;

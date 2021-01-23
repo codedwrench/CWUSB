@@ -23,65 +23,61 @@ bool USBSendThread::StartThread()
                     mQueue.pop();
                     mMutex.unlock();
 
-                            int lPacketIndex{0};
-                            mLastReceivedPacket = lFrontOfQueue;
-                            bool lContinue{true};
-                            while (lPacketIndex < lFrontOfQueue.length) {
-                                int lPacketSize{0};
-                                int lHeaderLength{0};
+                    int lPacketIndex{0};
+                    mLastReceivedPacket = lFrontOfQueue;
+                    bool lContinue{true};
+                    while (lPacketIndex < lFrontOfQueue.length) {
+                        int lPacketSize{0};
+                        int lHeaderLength{0};
 
-                                USB_Constants::BinaryStitchUSBPacket lPacket{};
+                        USB_Constants::BinaryStitchUSBPacket lPacket{};
 
-                                // First packet when stitching has a bigger header size
-                                if (lPacketIndex == 0) {
-                                    lHeaderLength = USB_Constants::cAsyncHeaderAndSubHeaderSize;
-                                } else {
-                                    lHeaderLength = USB_Constants::cAsyncHeaderSize;
-                                }
-
-                                // If the size is bigger than the buffer, start stitching
-                                lPacket.stitch = (lFrontOfQueue.length - lPacketIndex) >
-                                                 (USB_Constants::cMaxUSBPacketSize - lHeaderLength);
-
-                                // Length is either the size of the USB buffer or what's left of the packet
-                                unsigned int lLength{lPacket.stitch ? USB_Constants::cMaxUSBPacketSize - lHeaderLength :
-                                                                      lFrontOfQueue.length - lPacketIndex};
-
-                                // First add the packet header
-                                USB_Constants::AsyncCommand lCommand{};
-                                memset(&lCommand, 0, sizeof(lCommand));
-                                lCommand.channel = USB_Constants::cAsyncUserChannel;
-                                lCommand.magic   = USB_Constants::Asynchronous;
-
-                                memcpy(lPacket.data.data(), &lCommand, USB_Constants::cAsyncHeaderSize);
-                                lPacketSize += USB_Constants::cAsyncHeaderSize;
-
-                                // First packet needs a subheader
-                                if (lPacketIndex == 0) {
-                                    USB_Constants::AsyncSubHeader lSubHeader{};
-                                    memset(&lSubHeader, 0, USB_Constants::cAsyncSubHeaderSize);
-                                    lSubHeader.magic = USB_Constants::DebugPrint;
-                                    lSubHeader.mode  = 3;
-                                    lSubHeader.ref   = 0;  // i don't know why this is 0
-                                    lSubHeader.size  = lFrontOfQueue.length;
-                                    Logger::GetInstance().Log("size = " + std::to_string(lFrontOfQueue.length),
-                                                              Logger::Level::TRACE);
-
-                                    memcpy(lPacket.data.data() + lPacketSize,
-                                           &lSubHeader,
-                                           USB_Constants::cAsyncSubHeaderSize);
-                                    lPacketSize += USB_Constants::cAsyncSubHeaderSize;
-                                }
-
-                                memcpy(lPacket.data.data() + lPacketSize,
-                                       lFrontOfQueue.data.data() + lPacketIndex,
-                                       lLength);
-                                lPacketSize += lLength;
-
-                                lPacket.length = lPacketSize;
-                                lPacketIndex += lLength;
-                                mOutgoingQueue.push(lPacket);
+                        // First packet when stitching has a bigger header size
+                        if (lPacketIndex == 0) {
+                            lHeaderLength = USB_Constants::cAsyncHeaderAndSubHeaderSize;
+                        } else {
+                            lHeaderLength = USB_Constants::cAsyncHeaderSize;
                         }
+
+                        // If the size is bigger than the buffer, start stitching
+                        lPacket.stitch =
+                            (lFrontOfQueue.length - lPacketIndex) > (USB_Constants::cMaxUSBPacketSize - lHeaderLength);
+
+                        // Length is either the size of the USB buffer or what's left of the packet
+                        unsigned int lLength{lPacket.stitch ? USB_Constants::cMaxUSBPacketSize - lHeaderLength :
+                                                              lFrontOfQueue.length - lPacketIndex};
+
+                        // First add the packet header
+                        USB_Constants::AsyncCommand lCommand{};
+                        memset(&lCommand, 0, sizeof(lCommand));
+                        lCommand.channel = USB_Constants::cAsyncUserChannel;
+                        lCommand.magic   = USB_Constants::Asynchronous;
+
+                        memcpy(lPacket.data.data(), &lCommand, USB_Constants::cAsyncHeaderSize);
+                        lPacketSize += USB_Constants::cAsyncHeaderSize;
+
+                        // First packet needs a subheader
+                        if (lPacketIndex == 0) {
+                            USB_Constants::AsyncSubHeader lSubHeader{};
+                            memset(&lSubHeader, 0, USB_Constants::cAsyncSubHeaderSize);
+                            lSubHeader.magic = USB_Constants::DebugPrint;
+                            lSubHeader.mode  = 3;
+                            lSubHeader.ref   = 0;  // i don't know why this is 0
+                            lSubHeader.size  = lFrontOfQueue.length;
+                            Logger::GetInstance().Log("size = " + std::to_string(lFrontOfQueue.length),
+                                                      Logger::Level::TRACE);
+
+                            memcpy(lPacket.data.data() + lPacketSize, &lSubHeader, USB_Constants::cAsyncSubHeaderSize);
+                            lPacketSize += USB_Constants::cAsyncSubHeaderSize;
+                        }
+
+                        memcpy(lPacket.data.data() + lPacketSize, lFrontOfQueue.data.data() + lPacketIndex, lLength);
+                        lPacketSize += lLength;
+
+                        lPacket.length = lPacketSize;
+                        lPacketIndex += lLength;
+                        mOutgoingQueue.push(lPacket);
+                    }
                 } else {
                     // Never forget to unlock a mutex
                     mMutex.unlock();

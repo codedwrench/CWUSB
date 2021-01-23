@@ -56,9 +56,16 @@ output: pdf_document
    ``` ef0:/seplugins/AdhocToUSB.prx 1``` (for PSP GO N1000)
 
 4. Start a game on the PSP
-5. Start [XLink Kai](http://teamxlink.co.uk/) on the PC
+5. Download [Zadig](https://zadig.akeo.ie/) and install the libusbK driver:
+
+
+![](zadig.png "zadig")
+(note: if you do not see the psp, try going to Options->List all Devices)
+
+
+6. Start [XLink Kai](http://teamxlink.co.uk/) on the PC
     1. Download [here](https://www.teamxlink.co.uk/go?c=download)
     2. Install XLink Kai by running the downloaded exe
     3. Run XLink Kai, by hitting Start and searching for 'Start XLink Kai'
-6. Start CWUSB
-7. Enter the arena on XLink Kai you want to play on [WebUI](http://127.0.0.1:34522/) and enjoy!
+7. Start CWUSB
+8. Enter the arena on XLink Kai you want to play on [WebUI](http://127.0.0.1:34522/) and enjoy!

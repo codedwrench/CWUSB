@@ -67,6 +67,15 @@ if (MSVC OR MSYS OR MINGW)
     # We have no GUI anyway!
     add_definitions( -DNOGDI )
     set(LIBUSB_DEPENDS_DIR "C:/libusb")
+    # Linux specific options
+else ()
+    if(BUILD_DOC)
+        add_custom_target(build_setupguide ALL
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/Docs
+            COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/Docs/generate_pdf.sh"
+            COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/Docs/SetupGuide.pdf ${CMAKE_CURRENT_BINARY_DIR}
+            VERBATIM)
+    endif()
 endif ()
 
 if (BUILD_STATIC)
@@ -126,5 +135,3 @@ endif ()
 
 target_include_directories(cwusb PRIVATE ${LIBUSB_INCLUDE_DIR} ${Boost_INCLUDE_DIR})
 target_link_libraries(cwusb PRIVATE ${Boost_LIBRARIES} ${LIBUSB_LIBRARIES} ${PLATFORM_SPECIFIC_LIBRARIES})
-
-

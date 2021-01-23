@@ -25,10 +25,7 @@ bool USBReceiveThread::StartThread()
                     mQueue.pop();
                     mMutex.unlock();
 
-                    // If there is a message available and it is unique, add it
-                    if (lFrontOfQueue.length < 200 ||
-                        (lFrontOfQueue.length != mLastReceivedMessage.length) &&
-                            (lFrontOfQueue.data.data() != mLastReceivedMessage.data.data())) {
+
                         // If the last message was too big for the USB-buffer, append the current one.
                         if (mLastReceivedMessage.stitch) {
                             memcpy(mLastReceivedMessage.data.data() + mLastReceivedMessage.length,
@@ -47,15 +44,11 @@ bool USBReceiveThread::StartThread()
                         }
 
                         if (!lFrontOfQueue.stitch) {
-                            if ((lFrontOfQueue.length < 200) ||
-                                (mLastReceivedMessage.length != mLastCompleteMessage.length &&
-                                 mLastReceivedMessage.data != mLastCompleteMessage.data)) {
+
                                 mLastCompleteMessage = mLastReceivedMessage;
                                 mConnection.Send(
                                     std::string_view(mLastReceivedMessage.data.data(), mLastReceivedMessage.length));
-                            }
                         }
-                    }
                 } else {
                     // Never forget to unlock a mutex
                     mMutex.unlock();

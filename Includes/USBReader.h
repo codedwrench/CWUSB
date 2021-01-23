@@ -83,6 +83,8 @@ private:
     void HandleStitch(USB_Constants::AsyncCommand& aData, int aLength);
     int  SendHello();
 
+    int mReadWriteRetryCounter{0};
+
     /** True: program starts stitching packets. **/
     bool                                               mReceiveStitching{false};
     std::array<char, USB_Constants::cMaxUSBPacketSize> mTemporaryReceiveBuffer{0};

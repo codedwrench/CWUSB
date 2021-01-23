@@ -143,7 +143,7 @@ void USBReader::HandleAsynchronous(AsyncCommand& aData, int aLength)
                         Logger::GetInstance().Log(
                             "PSP: " +
                                 std::string(reinterpret_cast<char*>(&aData) + cAsyncHeaderAndSubHeaderSize, lLength),
-                            Logger::Level::DEBUG);
+                            Logger::Level::INFO);
                         break;
                     default:
                         // Don't know what we got
@@ -176,9 +176,12 @@ void USBReader::HandleAsynchronousSend()
         BinaryStitchUSBPacket lFormattedPacket = mUSBSendThread->PopFromOutgoingQueue();
         mSendStitching                         = lFormattedPacket.stitch;
         if (USBBulkWrite(
-                cUSBDataWriteEndpoint, lFormattedPacket.data.data(), lFormattedPacket.length, 2) ==
+                cUSBDataWriteEndpoint, lFormattedPacket.data.data(), lFormattedPacket.length, cMaxUSBWriteTimeOut) ==
             -1) {
-            mError = true;
+            mReadWriteRetryCounter++;
+            if (mReadWriteRetryCounter > cMaxUSBReadWriteErrors) {
+                mError = true;
+            }
         }
     }
 }
@@ -425,8 +428,11 @@ bool USBReader::StartReceiverThread()
                         } else if (lLength == LIBUSB_ERROR_TIMEOUT || lLength == LIBUSB_ERROR_BUSY) {
                             // Ignore, we're expecting this
                         } else {
+                            mReadWriteRetryCounter++;
+                            if (mReadWriteRetryCounter > cMaxUSBReadWriteErrors) {
+                                mError = true;
+                            }
                             // Probably fatal, try a restart of the device
-                            mError = true;
                         }
                     }
 

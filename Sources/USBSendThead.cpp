@@ -25,7 +25,7 @@ bool USBSendThread::StartThread()
 
                     // If there is a message available and it is unique, add it
                     // 300 seems like a good cutoff point for broadcast messages, but remains to be seen
-                    if ((lFrontOfQueue.length < 300 || (lFrontOfQueue.length != mLastReceivedPacket.length) &&
+                    if ((lFrontOfQueue.length < 200 || (lFrontOfQueue.length != mLastReceivedPacket.length) &&
                                                            (lFrontOfQueue.data != mLastReceivedPacket.data))) {
                         int lPacketIndex{0};
                         mLastReceivedPacket = lFrontOfQueue;
@@ -84,7 +84,7 @@ bool USBSendThread::StartThread()
                     mMutex.unlock();
                 }
             }
-            std::this_thread::sleep_for(std::chrono::microseconds(1));
+            std::this_thread::sleep_for(std::chrono::microseconds(10));
         });
         mDone   = true;
     }
@@ -116,8 +116,8 @@ bool USBSendThread::AddToQueue(std::string_view aData)
         mMutex.lock();
         mQueue.push(lPacket);
         mMutex.unlock();
-        if (mQueue.size() > (USBSendThread_Constants::cMaxQueueSize / 2)) {
-            Logger::GetInstance().Log("Sendbuffer got to over half its capacity! " + std::to_string(mQueue.size()),
+        if (mQueue.size() > 50) {
+            Logger::GetInstance().Log("Sendbuffer got to over 50! " + std::to_string(mQueue.size()),
                                       Logger::Level::WARNING);
         }
     } else {

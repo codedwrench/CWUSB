@@ -17,7 +17,7 @@ namespace boost
 
 namespace USBReceiveThread_Constants
 {
-    static constexpr int cMaxQueueSize{20};
+    static constexpr int cMaxQueueSize{1000};
 };
 
 class XLinkKaiConnection;

@@ -76,7 +76,7 @@ static inline int IsDebugPrintCommand(AsyncCommand& aData, int aLength)
             if (lSubHeader->mode == cAsyncModePacket && lSubHeader->ref == cAsyncCommandSendPacket) {
                 Logger::GetInstance().Log("Size reported: " + std::to_string(lSubHeader->size), Logger::Level::TRACE);
                 lReturn = cAsyncModePacket;
-            } else if (lSubHeader->mode == cAsyncModeDebug && lSubHeader->ref == cAsyncCommandPrintData) {
+            } else if (lSubHeader->mode == cAsyncModeDebug) {
                 lReturn = cAsyncModeDebug;
             }
         }
@@ -172,11 +172,11 @@ void USBReader::HandleAsynchronous(AsyncCommand& aData, int aLength)
 
 void USBReader::HandleAsynchronousSend()
 {
-    if (mUSBSendThread->HasOutgoingData()) {
+    while (mUSBSendThread->HasOutgoingData()) {
         BinaryStitchUSBPacket lFormattedPacket = mUSBSendThread->PopFromOutgoingQueue();
         mSendStitching                         = lFormattedPacket.stitch;
         if (USBBulkWrite(
-                cUSBDataWriteEndpoint, lFormattedPacket.data.data(), lFormattedPacket.length, cMaxUSBWriteTimeOut) ==
+                cUSBDataWriteEndpoint, lFormattedPacket.data.data(), lFormattedPacket.length, 2) ==
             -1) {
             mError = true;
         }

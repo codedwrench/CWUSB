@@ -26,7 +26,7 @@ bool USBReceiveThread::StartThread()
                     mMutex.unlock();
 
                     // If there is a message available and it is unique, add it
-                    if (lFrontOfQueue.length < 300 ||
+                    if (lFrontOfQueue.length < 200 ||
                         (lFrontOfQueue.length != mLastReceivedMessage.length) &&
                             (lFrontOfQueue.data.data() != mLastReceivedMessage.data.data())) {
                         // If the last message was too big for the USB-buffer, append the current one.
@@ -47,7 +47,7 @@ bool USBReceiveThread::StartThread()
                         }
 
                         if (!lFrontOfQueue.stitch) {
-                            if ((lFrontOfQueue.length < 300) ||
+                            if ((lFrontOfQueue.length < 200) ||
                                 (mLastReceivedMessage.length != mLastCompleteMessage.length &&
                                  mLastReceivedMessage.data != mLastCompleteMessage.data)) {
                                 mLastCompleteMessage = mLastReceivedMessage;
@@ -60,7 +60,7 @@ bool USBReceiveThread::StartThread()
                     // Never forget to unlock a mutex
                     mMutex.unlock();
                 }
-                std::this_thread::sleep_for(std::chrono::microseconds(1));
+                std::this_thread::sleep_for(std::chrono::microseconds(10));
             }
             mDone = true;
         });
@@ -89,8 +89,8 @@ bool USBReceiveThread::AddToQueue(const USB_Constants::BinaryStitchUSBPacket& aS
         mMutex.lock();
         mQueue.push(aStruct);
         mMutex.unlock();
-        if (mQueue.size() > (USBReceiveThread_Constants::cMaxQueueSize / 2)) {
-            Logger::GetInstance().Log("Receivebuffer got to over half its capacity! " + std::to_string(mQueue.size()),
+        if (mQueue.size() > 50) {
+            Logger::GetInstance().Log("Receivebuffer got to over 50! " + std::to_string(mQueue.size()),
                                       Logger::Level::WARNING);
         }
     } else {

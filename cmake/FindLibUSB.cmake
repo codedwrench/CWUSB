@@ -6,7 +6,7 @@
 #  LIBUSB_LIBRARIES - The libraries needed to use libusb
 #  LIBUSB_DEFINITIONS - Compiler switches required for using libusb
 
-IF(PKG_CONFIG_FOUND)
+IF(NOT BUILD_STATIC AND PKG_CONFIG_FOUND)
   IF(DEPENDS_DIR) #Otherwise use System pkg-config path
     SET(ENV{PKG_CONFIG_PATH} "$ENV{PKG_CONFIG_PATH}:${DEPENDS_DIR}/libusb/lib/pkgconfig")
   ENDIF()
@@ -31,10 +31,10 @@ ENDIF()
 
 FIND_PATH(LIBUSB_INCLUDE_DIR NAMES libusb.h
    HINTS
+   "${LIBUSB_DEPENDS_DIR}/"
    /usr
    /usr/local
    /opt
-   "${LIBUSB_DEPENDS_DIR}/"
    PATH_SUFFIXES 
     libusb-1.0
     include
@@ -46,10 +46,10 @@ FIND_LIBRARY(LIBUSB_LIBRARIES NAMES
    usb-1.0
    libusb-1.0
    HINTS
+   "${LIBUSB_DEPENDS_DIR}/"
    /usr
    /usr/local
    /opt
-   "${LIBUSB_DEPENDS_DIR}/"
    PATH_SUFFIXES
 IF (BUILD_STATIC)
     IF(MSYS OR MINGW)
@@ -57,13 +57,13 @@ IF (BUILD_STATIC)
     ELSEIF(MSVC)
         /MS64/static
     ELSE()
-        static
+        libusb/.libs/static
     ENDIF()
 ELSEIF(MSYS OR MINGW)
    # Do not use the ms64 dll for mingw
-	/MinGW64/dll
+   /MinGW64/dll
 ELSE()
-    /MS64/dll
+   /MS64/dll
 ENDIF()
 )
 

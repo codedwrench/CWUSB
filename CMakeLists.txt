@@ -1,18 +1,18 @@
 cmake_minimum_required(VERSION 3.15)
-project(CWUSB)
+project(cwusb)
 set(CMAKE_VERBOSE_MAKEFILE ON)
 set(CMAKE_MODULE_PATH
-  "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
-  "${CMAKE_MODULE_PATH}"
-)
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
+    "${CMAKE_MODULE_PATH}"
+    )
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 if (MSVC)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /O2")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /O2")
 else ()
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
 endif ()
 
 option(BUILD_DOC "Build doxygen" OFF)
@@ -34,10 +34,10 @@ if (BUILD_DOC AND DOXYGEN_FOUND)
     message("Doxygen build started")
 
     add_custom_target(doc_doxygen ALL
-            COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN_OUT}
-            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-            COMMENT "Generating API documentation with Doxygen"
-            VERBATIM)
+        COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN_OUT}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+        COMMENT "Generating API documentation with Doxygen"
+        VERBATIM)
 else (DOXYGEN_FOUND)
     message("Doxygen need to be installed to generate the doxygen documentation")
 endif (BUILD_DOC AND DOXYGEN_FOUND)
@@ -49,14 +49,13 @@ if (MSVC OR MSYS OR MINGW)
     if (MSYS OR MINGW)
         # Add WinSock to the platform specific libraries, MINGW needs it.
         string(APPEND PLATFORM_SPECIFIC_LIBRARIES "ws2_32")
-    
+
         # Needed because otherwise the libraries cannot be found.
         set(Boost_ARCHITECTURE "-x64")
     endif ()
-    
+
     set(BOOST_ROOT "e:/boost_1_75_0")
     set(Boost_LIBRARY_DIR "e:/boost_1_75_0/stage/lib")
-
     if (NOT BUILD_STATIC)
         # Magic that boost on windows seems to need.
         add_definitions( -DWIN32_LEAN_AND_MEAN )
@@ -71,6 +70,17 @@ if (MSVC OR MSYS OR MINGW)
 endif ()
 
 if (BUILD_STATIC)
+    if (NOT MSYS OR MINGW)
+        message("Building statically, please set your paths to the correct ones")
+        set(BOOST_ROOT "/home/codedwrench/src/boost")
+        set(Boost_LIBRARY_DIR "/home/codedwrench/src/boost/stage/lib")
+        set(Boost_NO_BOOST_CMAKE TRUE)
+        set(Boost_NO_SYSTEM_PATHS TRUE)
+        set(LIBUSB_DEPENDS_DIR "/home/codedwrench/src/libusb")
+        find_package(Udev REQUIRED)
+        string(APPEND PLATFORM_SPECIFIC_LIBRARIES "${UDEV_LIBRARIES}")
+    endif ()
+
     message("Static linking enabled")
     set(BUILD_STATIC ON)
     add_definitions(-DBUILD_STATIC)
@@ -85,36 +95,36 @@ find_package(Threads REQUIRED)
 find_package(Boost 1.71 REQUIRED COMPONENTS chrono date_time atomic thread regex system program_options)
 
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/PSPLinkBSD.txt
-     DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+    DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/cnf/config.txt
-     DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
-	
+    DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+
 # TODO: Make this search for source files automatically, this is very ugly!
-add_executable(CWUSB main.cpp
-        Sources/Logger.cpp
-        Sources/SettingsModel.cpp
-        Sources/XLinkKaiConnection.cpp
-        Sources/USBReceiveThread.cpp
-        Sources/USBSendThead.cpp
-        Sources/USBReader.cpp
-        Sources/Timer.cpp
-        Includes/USBConstants.h
-        Includes/Logger.h
-        Includes/NetworkingHeaders.h
-        Includes/XLinkKaiConnection.h
-        Includes/NetConversionFunctions.h
-        Includes/SettingsModel.h
-        Includes/Timer.h
-        Includes/USBReceiveThread.h
-        Includes/USBSendThread.h
-        Includes/USBReader.h
-        ${EXTRA_INCLUDES})
+add_executable(cwusb main.cpp
+    Sources/Logger.cpp
+    Sources/SettingsModel.cpp
+    Sources/XLinkKaiConnection.cpp
+    Sources/USBReceiveThread.cpp
+    Sources/USBSendThead.cpp
+    Sources/USBReader.cpp
+    Sources/Timer.cpp
+    Includes/USBConstants.h
+    Includes/Logger.h
+    Includes/NetworkingHeaders.h
+    Includes/XLinkKaiConnection.h
+    Includes/NetConversionFunctions.h
+    Includes/SettingsModel.h
+    Includes/Timer.h
+    Includes/USBReceiveThread.h
+    Includes/USBSendThread.h
+    Includes/USBReader.h
+    ${EXTRA_INCLUDES})
 
 if (BUILD_STATIC)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libgcc -static-libstdc++")
 endif ()
 
-target_include_directories(CWUSB PRIVATE ${LIBUSB_INCLUDE_DIR} ${Boost_INCLUDE_DIR})
-target_link_libraries(CWUSB PRIVATE ${Boost_LIBRARIES} ${LIBUSB_LIBRARIES} ${PLATFORM_SPECIFIC_LIBRARIES})
+target_include_directories(cwusb PRIVATE ${LIBUSB_INCLUDE_DIR} ${Boost_INCLUDE_DIR})
+target_link_libraries(cwusb PRIVATE ${Boost_LIBRARIES} ${LIBUSB_LIBRARIES} ${PLATFORM_SPECIFIC_LIBRARIES})
 
 

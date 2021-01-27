@@ -17,7 +17,7 @@ output: pdf_document
 
    or 
 
-   ``` ef0:/seplugins/AdhocToUSB.prx 1``` (for PSP GO N1000)
+   ``` ef0:/seplugins/AdhocToUSB.prx 1``` (for PSP GO)
 \
    ```bash
    touch /media/username/nameofPSP/SEPLUGINS/GAME.TXT \
@@ -53,7 +53,7 @@ output: pdf_document
 
    or 
 
-   ``` ef0:/seplugins/AdhocToUSB.prx 1``` (for PSP GO N1000)
+   ``` ef0:/seplugins/AdhocToUSB.prx 1``` (for PSP GO)
 
 4. Start a game on the PSP
 5. Download [Zadig](https://zadig.akeo.ie/) and install the libusbK driver:

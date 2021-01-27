@@ -8,6 +8,8 @@
 #include "../Includes/NetConversionFunctions.h"
 #include "../Includes/XLinkKaiConnection.h"
 
+USBSendThread::USBSendThread(int aMaxBufferSize) : mMaxBufferSize(aMaxBufferSize) {}
+
 bool USBSendThread::StartThread()
 {
     bool lReturn{true};
@@ -97,7 +99,7 @@ void USBSendThread::StopThread()
         std::this_thread::sleep_for(std::chrono::seconds(1));
     }
     ClearQueues();
-    if (mThread->joinable()) {
+    if (mThread != nullptr && mThread->joinable()) {
         mThread->join();
     }
     mThread = nullptr;
@@ -106,7 +108,7 @@ void USBSendThread::StopThread()
 bool USBSendThread::AddToQueue(std::string_view aData)
 {
     bool lReturn{false};
-    if (mQueue.size() < USBSendThread_Constants::cMaxQueueSize) {
+    if (mQueue.size() < mMaxBufferSize) {
         lReturn = true;
         USB_Constants::BinaryWiFiPacket lPacket{};
         memcpy(lPacket.data.data(), aData.data(), aData.size());

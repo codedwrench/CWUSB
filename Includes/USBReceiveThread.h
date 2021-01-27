@@ -15,11 +15,6 @@ namespace boost
     class thread;
 }
 
-namespace USBReceiveThread_Constants
-{
-    static constexpr int cMaxQueueSize{1000};
-};
-
 class XLinkKaiConnection;
 
 class USBReceiveThread
@@ -29,7 +24,7 @@ public:
      * Constructor for USBReceiveThread.
      * @param aConnection - The connection to send the data on.
      */
-    explicit USBReceiveThread(XLinkKaiConnection& aConnection);
+    explicit USBReceiveThread(XLinkKaiConnection& aConnection, int aMaxBufferSize);
     ~USBReceiveThread();
     USBReceiveThread(const USBReceiveThread& aUSBReceiveThread) = delete;
     USBReceiveThread& operator=(const USBReceiveThread& aUSBReceiveThread) = delete;
@@ -58,6 +53,7 @@ public:
     void ClearQueues();
 
 private:
+    int                                              mMaxBufferSize{0};
     XLinkKaiConnection&                              mConnection;
     bool                                             mDone{true};
     bool                                             mError{false};

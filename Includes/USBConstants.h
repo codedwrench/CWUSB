@@ -46,9 +46,6 @@ namespace USB_Constants
     constexpr unsigned int cMaxUSBPacketSize{512};
 
     constexpr unsigned int cMaxUSBHelloTimeout{1000};
-    constexpr unsigned int cMaxUSBReadWriteErrors{10};
-    constexpr unsigned int cMaxUSBReadTimeOut{2};
-    constexpr unsigned int cMaxUSBWriteTimeOut{2};
 
     constexpr unsigned int cUSBDataReadEndpoint{0x81};
     constexpr unsigned int cUSBDataWriteEndpoint{0x3};

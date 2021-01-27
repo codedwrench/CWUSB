@@ -28,7 +28,11 @@ class XLinkKaiConnection;
 class USBReader
 {
 public:
-    USBReader();
+    USBReader(int aMaxBufferedMessages,
+              int aMaxFatalRetries,
+              int aMaxReadWriteRetries,
+              int aReadTimeoutMS,
+              int aWriteTimeoutMS);
     ~USBReader();
     USBReader(const USBReader& aUSBReader) = delete;
     USBReader& operator=(const USBReader& aUSBReader) = delete;
@@ -82,6 +86,12 @@ private:
     void HandleError();
     void HandleStitch(USB_Constants::AsyncCommand& aData, int aLength);
     int  SendHello();
+
+    int mMaxBufferedMessages{0};
+    int mMaxFatalRetries{0};
+    int mMaxReadWriteRetries{0};
+    int mReadTimeoutMS{0};
+    int mWriteTimeoutMS{0};
 
     int mReadWriteRetryCounter{0};
 

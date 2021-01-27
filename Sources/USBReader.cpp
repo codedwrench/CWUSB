@@ -45,13 +45,16 @@ namespace
 {
     constexpr unsigned int cPSPVID{0x54C};
     constexpr unsigned int cPSPPID{0x1C9};
-    constexpr unsigned int cMaxRetries{50};
 }  // namespace
 
 using namespace std::chrono_literals;
 using namespace USB_Constants;
 
-USBReader::USBReader()
+USBReader::USBReader(
+    int aMaxBufferedMessages, int aMaxFatalRetries, int aMaxReadWriteRetries, int aReadTimeoutMS, int aWriteTimeoutMS) :
+    mMaxBufferedMessages(aMaxBufferedMessages),
+    mMaxFatalRetries(aMaxFatalRetries), mMaxReadWriteRetries(aMaxReadWriteRetries), mReadTimeoutMS(aReadTimeoutMS),
+    mWriteTimeoutMS(aWriteTimeoutMS)
 {
     libusb_init(nullptr);
 }
@@ -86,9 +89,10 @@ static inline int IsDebugPrintCommand(AsyncCommand& aData, int aLength)
 void USBReader::Close()
 {
     // Close thread nicely
-    if (mUSBThread != nullptr && !mUSBThread->joinable()) {
-        mStopRequest = true;
-        while (mStopRequest) {
+    mStopRequest = true;
+    
+    if (mUSBThread != nullptr) {
+        while (mStopRequest && !mUSBThread->joinable()) {
             std::this_thread::sleep_for(1s);
         }
         mUSBThread->join();
@@ -171,14 +175,14 @@ void USBReader::HandleAsynchronous(AsyncCommand& aData, int aLength)
 
 void USBReader::HandleAsynchronousSend()
 {
-    while (mUSBSendThread->HasOutgoingData()) {
+    while ((!mStopRequest) && mUSBSendThread->HasOutgoingData()) {
         BinaryStitchUSBPacket lFormattedPacket = mUSBSendThread->PopFromOutgoingQueue();
         mSendStitching                         = lFormattedPacket.stitch;
         if (USBBulkWrite(
-                cUSBDataWriteEndpoint, lFormattedPacket.data.data(), lFormattedPacket.length, cMaxUSBWriteTimeOut) ==
-            -1) {
+                cUSBDataWriteEndpoint, lFormattedPacket.data.data(), lFormattedPacket.length, mWriteTimeoutMS) == -1) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(mWriteTimeoutMS));
             mReadWriteRetryCounter++;
-            if (mReadWriteRetryCounter > cMaxUSBReadWriteErrors) {
+            if (mReadWriteRetryCounter > mMaxReadWriteRetries) {
                 mError = true;
             }
         }
@@ -213,8 +217,8 @@ void USBReader::HandleError()
     mUSBSendThread->ClearQueues();
     mUSBReceiveThread->ClearQueues();
 
-    Logger::GetInstance().Log("Ran into a snag, restarting stack!", Logger::Level::WARNING);
-    std::this_thread::sleep_for(100ms);
+    Logger::GetInstance().Log("Ran into a snag, restarting stack!", Logger::Level::DEBUG);
+    std::this_thread::sleep_for(1ms);
 }
 
 bool USBReader::Open()
@@ -293,14 +297,18 @@ int USBReader::USBBulkRead(int aEndpoint, int aSize, int aTimeOut)
 {
     int lReturn{-1};
     int lError{0};
-    lError = libusb_bulk_transfer(mDeviceHandle,
-                                  aEndpoint,
-                                  reinterpret_cast<unsigned char*>(mTemporaryReceiveBuffer.data()),
-                                  aSize,
-                                  &lReturn,
-                                  aTimeOut);
-    if (lError != 0) {
-        lReturn = lError;
+    if (mDeviceHandle != nullptr) {
+        lError = libusb_bulk_transfer(mDeviceHandle,
+                                      aEndpoint,
+                                      reinterpret_cast<unsigned char*>(mTemporaryReceiveBuffer.data()),
+                                      aSize,
+                                      &lReturn,
+                                      aTimeOut);
+        if (lError != 0) {
+            lReturn = lError;
+        }
+    } else {
+        lReturn = -1;
     }
 
     return lReturn;
@@ -310,12 +318,16 @@ int USBReader::USBBulkWrite(int aEndpoint, char* aData, int aSize, int aTimeOut)
 {
     int lReturn{-1};
 
-    int lError = libusb_bulk_transfer(
-        mDeviceHandle, aEndpoint, reinterpret_cast<unsigned char*>(aData), aSize, &lReturn, aTimeOut);
-    if (lError < 0) {
-        Logger::GetInstance().Log(
-            std::string("Error during Bulk write: ") + libusb_strerror(static_cast<libusb_error>(lError)),
-            Logger::Level::ERROR);
+    if (mDeviceHandle != nullptr) {
+        int lError = libusb_bulk_transfer(
+            mDeviceHandle, aEndpoint, reinterpret_cast<unsigned char*>(aData), aSize, &lReturn, aTimeOut);
+        if (lError < 0) {
+            Logger::GetInstance().Log(
+                std::string("Error during Bulk write: ") + libusb_strerror(static_cast<libusb_error>(lError)),
+                Logger::Level::ERROR);
+            lReturn = -1;
+        }
+    } else {
         lReturn = -1;
     }
 
@@ -394,10 +406,10 @@ bool USBReader::StartReceiverThread()
     bool lReturn{true};
 
     if (mDeviceHandle != nullptr && mUSBThread == nullptr) {
-        mUSBReceiveThread = std::make_shared<USBReceiveThread>(*mIncomingConnection);
+        mUSBReceiveThread = std::make_shared<USBReceiveThread>(*mIncomingConnection, mMaxBufferedMessages);
         mUSBReceiveThread->StartThread();
 
-        mUSBSendThread = std::make_shared<USBSendThread>();
+        mUSBSendThread = std::make_shared<USBSendThread>(mMaxBufferedMessages);
         mUSBSendThread->StartThread();
 
         mUSBThread = std::make_shared<boost::thread>([&] {
@@ -410,9 +422,9 @@ bool USBReader::StartReceiverThread()
                         mUSBCheckSuccessful = USBCheckDevice();
                     }
 
-                    if ((mError && mRetryCounter < cMaxRetries) || (!mUSBCheckSuccessful)) {
+                    if ((mError && mRetryCounter < mMaxFatalRetries) || (!mUSBCheckSuccessful)) {
                         HandleError();
-                    } else if (mRetryCounter >= cMaxRetries) {
+                    } else if (mRetryCounter >= mMaxFatalRetries) {
                         Logger::GetInstance().Log("Too many errors! Bailing out!", Logger::Level::ERROR);
                         HandleClose();
                         mRetryCounter = 0;
@@ -420,15 +432,19 @@ bool USBReader::StartReceiverThread()
 
                     if (!mSendStitching) {
                         // First read, then write
-                        int lLength{USBBulkRead(cUSBDataReadEndpoint, cMaxUSBPacketSize, cMaxUSBReadTimeOut)};
+                        int lLength{USBBulkRead(cUSBDataReadEndpoint, cMaxUSBPacketSize, mReadTimeoutMS)};
                         if (lLength > 0) {
                             mLength = lLength;
+                            mRetryCounter = 0;
                             ReceiveCallback();
                         } else if (lLength == LIBUSB_ERROR_TIMEOUT || lLength == LIBUSB_ERROR_BUSY) {
-                            // Ignore, we're expecting this
+                            std::this_thread::sleep_for(std::chrono::milliseconds(mReadTimeoutMS));
+                        } else if (mDeviceHandle == nullptr) {
+                            mError = true;
                         } else {
+                            std::this_thread::sleep_for(std::chrono::milliseconds(mReadTimeoutMS));
                             mReadWriteRetryCounter++;
-                            if (mReadWriteRetryCounter > cMaxUSBReadWriteErrors) {
+                            if (mReadWriteRetryCounter > mMaxReadWriteRetries) {
                                 mError = true;
                             }
                             // Probably fatal, try a restart of the device

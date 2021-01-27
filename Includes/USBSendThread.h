@@ -16,16 +16,13 @@ namespace boost
     class thread;
 }
 
-namespace USBSendThread_Constants
-{
-    static constexpr int cMaxQueueSize{1000};
-}  // namespace USBSendThread_Constants
-
 class XLinkKaiConnection;
 
 class USBSendThread
 {
 public:
+    explicit USBSendThread(int aMaxBufferSize);
+
     /**
      * Starts the thread to receive data from USB.
      * @return true if successful.
@@ -61,6 +58,7 @@ public:
     USB_Constants::BinaryStitchUSBPacket PopFromOutgoingQueue();
 
 private:
+    int                                              mMaxBufferSize{0};
     bool                                             mDone{true};
     bool                                             mError{false};
     std::mutex                                       mMutex{};

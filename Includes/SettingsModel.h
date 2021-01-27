@@ -21,11 +21,21 @@ namespace SettingsModel_Constants
     static constexpr std::string_view cSaveChannel{"Channel"};
     static constexpr std::string_view cSaveXLinkIp{"XLinkIp"};
     static constexpr std::string_view cSaveXLinkPort{"XLinkPort"};
+    static constexpr std::string_view cSaveMaxBufferedMessages{"MaxBuffer"};
+    static constexpr std::string_view cSaveMaxFatalRetries{"MaxRetriesAfterFatalError"};
+    static constexpr std::string_view cSaveMaxReadWriteRetries{"MaxRetriesWhenReadWriteFailed"};
+    static constexpr std::string_view cSaveReadTimeOutMS{"MaxReadTimeoutMS"};
+    static constexpr std::string_view cSaveWriteTimeOutMS{"MaxWriteTimeoutMS"};
 
     static constexpr Logger::Level    cDefaultLogLevel{Logger::Level::INFO};
     static constexpr bool             cDefaultAutoDiscoverXLinkKai{false};
     static constexpr std::string_view cDefaultXLinkIp{"127.0.0.1"};
     static constexpr std::string_view cDefaultXLinkPort{"34523"};
+    static constexpr int              cDefaultMaxBufferedMessages{1000};
+    static constexpr int              cDefaultMaxFatalRetries{5000};
+    static constexpr int              cDefaultMaxReadWriteRetries{5000};
+    static constexpr int              cDefaultReadTimeOutMS{2};
+    static constexpr int              cDefaultWriteTimeOutMS{2};
 
     enum class EngineStatus
     {
@@ -40,8 +50,6 @@ namespace SettingsModel_Constants
     {
         StartEngine = 0,
         StopEngine,
-        StartSearchNetworks,
-        StopSearchNetworks,
         SaveSettings,
         NoCommand
     };
@@ -55,6 +63,11 @@ public:
 
     std::string mXLinkIp{SettingsModel_Constants::cDefaultXLinkIp};
     std::string mXLinkPort{SettingsModel_Constants::cDefaultXLinkPort};
+    int         mMaxBufferedMessages{SettingsModel_Constants::cDefaultMaxBufferedMessages};
+    int         mMaxFatalRetries{SettingsModel_Constants::cDefaultMaxFatalRetries};
+    int         mMaxReadWriteRetries{SettingsModel_Constants::cDefaultMaxReadWriteRetries};
+    int         mReadTimeOutMS{SettingsModel_Constants::cDefaultReadTimeOutMS};
+    int         mWriteTimeOutMS{SettingsModel_Constants::cDefaultWriteTimeOutMS};
 
     // Statuses
     SettingsModel_Constants::EngineStatus mEngineStatus{SettingsModel_Constants::EngineStatus::Idle};

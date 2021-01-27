@@ -7,7 +7,9 @@
 #include "../Includes/Logger.h"
 #include "../Includes/XLinkKaiConnection.h"
 
-USBReceiveThread::USBReceiveThread(XLinkKaiConnection& aConnection) : mConnection(aConnection) {}
+USBReceiveThread::USBReceiveThread(XLinkKaiConnection& aConnection, int aMaxBufferSize) :
+    mConnection(aConnection), mMaxBufferSize(aMaxBufferSize)
+{}
 
 bool USBReceiveThread::StartThread()
 {
@@ -67,7 +69,8 @@ void USBReceiveThread::StopThread()
         std::this_thread::sleep_for(std::chrono::seconds(1));
     }
     ClearQueues();
-    if (mThread->joinable()) {
+    
+    if (mThread != nullptr && mThread->joinable()) {
         mThread->join();
     }
     mThread = nullptr;
@@ -76,7 +79,7 @@ void USBReceiveThread::StopThread()
 bool USBReceiveThread::AddToQueue(const USB_Constants::BinaryStitchUSBPacket& aStruct)
 {
     bool lReturn{false};
-    if (mQueue.size() < USBReceiveThread_Constants::cMaxQueueSize) {
+    if (mQueue.size() < mMaxBufferSize) {
         lReturn = true;
         mMutex.lock();
         mQueue.push(aStruct);

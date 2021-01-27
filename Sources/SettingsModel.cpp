@@ -1,5 +1,7 @@
 #include "../Includes/SettingsModel.h"
 
+#include <cstddef>
+
 /* Copyright (c) 2020 [Rick de Bondt] - SettingsModel.cpp */
 
 using namespace SettingsModel_Constants;
@@ -30,6 +32,12 @@ bool SettingsModel::SaveToFile(std::string_view aPath) const
         lFile << cSaveLogLevel << ": \"" << Logger::ConvertLogLevelToString(mLogLevel) << "\"" << std::endl;
         lFile << cSaveXLinkIp << ": \"" << mXLinkIp << "\"" << std::endl;
         lFile << cSaveXLinkPort << ": \"" << mXLinkPort << "\"" << std::endl;
+        lFile << cSaveMaxBufferedMessages << ": \"" << std::to_string(mMaxBufferedMessages) << "\"" << std::endl;
+        lFile << cSaveMaxFatalRetries << ": \"" << std::to_string(mMaxFatalRetries) << "\"" << std::endl;
+        lFile << cSaveMaxReadWriteRetries << ": \"" << std::to_string(mMaxReadWriteRetries) << "\"" << std::endl;
+        lFile << cSaveReadTimeOutMS << ": \"" << std::to_string(mReadTimeOutMS) << "\"" << std::endl;
+        lFile << cSaveWriteTimeOutMS << ": \"" << std::to_string(mWriteTimeOutMS) << "\"" << std::endl;
+
         lFile.close();
 
         if (lFile.good()) {
@@ -65,12 +73,23 @@ bool SettingsModel::LoadFromFile(std::string_view aPath)
                 std::string lResult{lLine.substr(lUntilDelimiter + 1, lLine.size() - lUntilDelimiter - 1)};
                 try {
                     if (!lResult.empty()) {
+                        // TODO: rewrite to switch case
                         if (lOption == cSaveLogLevel) {
                             mLogLevel = Logger::ConvertLogLevelStringToLevel(lResult.substr(1, lResult.size() - 2));
                         } else if (lOption == cSaveXLinkIp) {
                             mXLinkIp = lResult.substr(1, lResult.size() - 2);
                         } else if (lOption == cSaveXLinkPort) {
                             mXLinkPort = lResult.substr(1, lResult.size() - 2);
+                        } else if (lOption == cSaveMaxBufferedMessages) {
+                            mMaxBufferedMessages = std::stoi(lResult.substr(1, lResult.size() - 2));
+                        } else if (lOption == cSaveMaxFatalRetries) {
+                            mMaxFatalRetries = std::stoi(lResult.substr(1, lResult.size() - 2));
+                        } else if (lOption == cSaveMaxReadWriteRetries) {
+                            mMaxReadWriteRetries = std::stoi(lResult.substr(1, lResult.size() - 2));
+                        } else if (lOption == cSaveReadTimeOutMS) {
+                            mReadTimeOutMS = std::stoi(lResult.substr(1, lResult.size() - 2));
+                        } else if (lOption == cSaveWriteTimeOutMS) {
+                            mWriteTimeOutMS = std::stoi(lResult.substr(1, lResult.size() - 2));
                         } else {
                             Logger::GetInstance().Log(std::string("Option:") + lOption + " unknown",
                                                       Logger::Level::DEBUG);

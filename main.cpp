@@ -68,8 +68,8 @@ int main(int argc, char* argv[])
 
     std::shared_ptr<XLinkKaiConnection> lXLinkKaiConnection{std::make_shared<XLinkKaiConnection>()};
     std::shared_ptr<USBReader> lUSBReaderConnection{std::make_shared<USBReader>(mSettingsModel.mMaxBufferedMessages,
-                                                                                mSettingsModel.mMaxReadWriteRetries,
                                                                                 mSettingsModel.mMaxFatalRetries,
+                                                                                mSettingsModel.mMaxReadWriteRetries,
                                                                                 mSettingsModel.mReadTimeOutMS,
                                                                                 mSettingsModel.mWriteTimeOutMS)};
 

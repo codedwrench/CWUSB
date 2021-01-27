@@ -64,7 +64,7 @@ int main(int argc, char* argv[])
     Logger::GetInstance().Init(mSettingsModel.mLogLevel, cLogToDisk, lProgramPath + cLogFileName.data());
     Logger::GetInstance().SetLogToScreen(true);
 
-    Logger::GetInstance().Log("PSPXLinkBridge, by CodedWrench", Logger::Level::INFO);
+    Logger::GetInstance().Log("CWUSB, by CodedWrench", Logger::Level::INFO);
 
     std::shared_ptr<XLinkKaiConnection> lXLinkKaiConnection{std::make_shared<XLinkKaiConnection>()};
     std::shared_ptr<USBReader> lUSBReaderConnection{std::make_shared<USBReader>(mSettingsModel.mMaxBufferedMessages,

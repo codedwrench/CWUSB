@@ -226,14 +226,15 @@ bool USBReader::Open()
     libusb_device_handle* lDeviceHandle{nullptr};
     libusb_device**       lDevices{nullptr};
     libusb_device*        lDevice{nullptr};
-    int                   lCount{0};
+    int                   lAmountOfDevices{0};
     int                   lReturn{0};
 
-    lReturn = libusb_get_device_list(nullptr, &lDevices);
-    if (lReturn >= 0) {
-        for (lCount = 0; lDevices[lCount] != nullptr; lCount++) {
+    lAmountOfDevices = libusb_get_device_list(nullptr, &lDevices);
+    if (lAmountOfDevices >= 0 && lDevices != nullptr) {
+        for(int lCount = 0; (lCount < lAmountOfDevices) && (mDeviceHandle == nullptr); lCount++) {
             lDevice = lDevices[lCount];
-            libusb_device_descriptor lDescriptor{};
+            libusb_device_descriptor lDescriptor{0};
+            memset(&lDescriptor, 0, sizeof(lDescriptor));
             lReturn = libusb_get_device_descriptor(lDevice, &lDescriptor);
 
             if (lReturn >= 0) {

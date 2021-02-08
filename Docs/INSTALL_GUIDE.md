@@ -70,6 +70,31 @@ output: pdf_document
 7. Start CWUSB
 8. Enter the arena on XLink Kai you want to play on [WebUI](http://127.0.0.1:34522/) and enjoy!
 
+\newpage
+
+## macOS
+1. Copy [AdHocToUSB.prx](https://github.com/plus11/adhoctousb-guide/tree/main/AdhocToUSB) to /SEPLUGINS on the PSP
+2. Create or open /SEPLUGINS/GAME.TXT
+3. Add 
+
+   ```ms0:/seplugins/AdhocToUSB.prx 1``` (for PSP 1000/2000/3000) 
+
+   or 
+
+   ``` ef0:/seplugins/AdhocToUSB.prx 1``` (for PSP GO)
+
+4. Start a game on the PSP
+5. Start [XLink Kai](http://teamxlink.co.uk/) on the PC
+    1. Download the package from the [download page](https://www.teamxlink.co.uk/go?c=download), after downloading, follow [these](https://www.teamxlink.co.uk/wiki/Installing_on_macOS) steps
+6. Open terminal and navigate to where cwusb is saved, then:
+   ```bash
+   sudo chmod 755 ./cwusb
+   ```
+7. Now double click on cwusb
+8. Enter the arena on XLink Kai you want to play on [WebUI](http://127.0.0.1:34522/) and enjoy!
+
+\newpage
+
 ## Troubleshooting
 - I'm getting an error about: MSVCP140.dll, VCRUNTIME140.dll or VCRUNTIME140_1.dll
    - Install [Microsoft Visual C++ Redistributable for Visual Studio 2015, 2017 and 2019](https://aka.ms/vs/16/release/vc_redist.x64.exe)

@@ -14,6 +14,7 @@ This program has only been tested on Debian Testing and above. It requires the f
 -   libboost-thread-dev
 -   libboost-program-options-dev
 -   libpthread-stubs0-dev
+-   libusb-dev
 
 If those packages are installed, you can compile the program using the following command (from the project's root):
 

@@ -11,7 +11,7 @@
 #include <fstream>
 
 // Does not exist in Visual Studio yet, https://github.com/microsoft/STL/pull/664
-#if defined(__GNUC__) || defined(__GNUG__)
+#if (defined(__GNUC__) || defined(__GNUG__)) && not defined(__APPLE__)
 #include <experimental/source_location>
 #endif
 
@@ -72,7 +72,7 @@ public:
      * @param aLevel - Loglevel to use.
      * @param aLocation - Source location (keep empty).
      */
-#if defined(__GNUC__) || defined(__GNUG__)
+#if (defined(__GNUC__) || defined(__GNUG__)) && not defined(__APPLE__)
     void Log(const std::string&                        aText,
              Level                                     aLevel,
              const std::experimental::source_location& aLocation = std::experimental::source_location::current());

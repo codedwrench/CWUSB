@@ -86,8 +86,10 @@ if (BUILD_STATIC)
         set(Boost_NO_BOOST_CMAKE TRUE)
         set(Boost_NO_SYSTEM_PATHS TRUE)
         set(LIBUSB_DEPENDS_DIR "/home/codedwrench/src/libusb")
-        find_package(Udev REQUIRED)
-        string(APPEND PLATFORM_SPECIFIC_LIBRARIES "${UDEV_LIBRARIES}")
+	if(UNIX AND NOT APPLE)
+        	find_package(Udev REQUIRED)
+        	string(APPEND PLATFORM_SPECIFIC_LIBRARIES "${UDEV_LIBRARIES}")
+	endif()
     endif ()
 
     message("Static linking enabled")
@@ -130,7 +132,12 @@ add_executable(cwusb main.cpp
     ${EXTRA_INCLUDES})
 
 if (BUILD_STATIC)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libgcc -static-libstdc++")
+    if(NOT APPLE)
+    	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libgcc -static-libstdc++")
+    else()
+        # Needed for libusb
+    	set(CMAKE_CXX_FLAGS "-Wl,-framework,IOKit -Wl,-framework,CoreFoundation -lobjc ${CMAKE_CXX_FLAGS}")
+    endif()
 endif ()
 
 target_include_directories(cwusb PRIVATE ${LIBUSB_INCLUDE_DIR} ${Boost_INCLUDE_DIR})

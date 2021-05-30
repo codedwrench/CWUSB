@@ -11,8 +11,7 @@ This program has only been tested on Debian Testing and above. It requires the f
 -   cmake
 -   gcc-10
 -   libboost-dev (version 1.71 or above)
--   libboost-thread-dev
--   libboost-program-options-dev
+-   libboost-system-dev
 -   libpthread-stubs0-dev
 -   libusb-dev
 
@@ -52,8 +51,7 @@ mingw32-make
 
 After compiling, the program needs the following DLLs to be copied over to the binary directory:
 
-- boost_program_options-(compiler)-(architecture)-(version).dll
-- boost_thread-(compiler)-(architecture)-(version).dll
+- boost_system-(compiler)-(architecture)-(version).dll
 - libusb-1.0.dll (found in: C:\libusb\(compiler)\dll)
 After that the program should be able to run.
 

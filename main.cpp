@@ -120,5 +120,4 @@ int main(int argc, char* argv[])
     if (lThread.joinable()) {
         lThread.join();
     }
-    exit(0);
 }

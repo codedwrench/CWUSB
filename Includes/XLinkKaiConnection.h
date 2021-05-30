@@ -28,8 +28,8 @@ namespace XLinkKai_Constants
     static constexpr std::string_view     cEthernetDataMetaFormat{"d"};
     static constexpr std::string_view     cSettingFormat{"setting"};
     static constexpr std::string_view     cSettingDDSOnly{"ddsonly"};
-    static constexpr std::string_view     cLocallyUniqueName{"XLHA_Device"};
-    static constexpr std::string_view     cEmulatorName{"XLHA"};
+    static constexpr std::string_view     cLocallyUniqueName{"CWUSB_Device"};
+    static constexpr std::string_view     cEmulatorName{"CWUSB"};
     static constexpr unsigned int         cPort{34523};
     static constexpr std::chrono::seconds cConnectionTimeout{10};
     static constexpr std::chrono::seconds cKeepAliveTimeout{60};

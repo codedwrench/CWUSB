@@ -10,9 +10,9 @@
 #include <iostream>
 #include <memory>
 #include <mutex>
-#include <thread>
 #include <queue>
 #include <string_view>
+#include <thread>
 
 #include "USBConstants.h"
 

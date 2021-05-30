@@ -115,6 +115,7 @@ int main(int argc, char* argv[])
     }
 
     lUSBReaderConnection->Close();
+    lXLinkKaiConnection->Close();
 
     lSignalIoService.stop();
     if (lThread.joinable()) {

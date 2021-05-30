@@ -5,16 +5,17 @@
 #include <chrono>
 #include <cstring>
 #include <iostream>
-#include <utility>
+#include <thread>
 
-#include <boost/asio.hpp>
-#include <boost/thread.hpp>
+#include <boost/bind/bind.hpp>
+#include <boost/exception/diagnostic_information.hpp>
 
 #include "../Includes/Logger.h"
 #include "../Includes/NetConversionFunctions.h"
 
 
 using namespace boost::asio;
+using namespace boost::placeholders;
 using namespace std::chrono_literals;
 
 XLinkKaiConnection::~XLinkKaiConnection()
@@ -35,12 +36,12 @@ bool XLinkKaiConnection::Open(std::string_view aIp, unsigned int aPort)
     unsigned int lPort{aPort};
 
     // TODO: Do broadcast, but for now, use default stuff
-    if (aIp == "") {
+    if (aIp.empty()) {
         lIp   = cIp;
         lPort = cPort;
     }
 
-    mRemote = ip::udp::endpoint(ip::address::from_string(aIp.data()), aPort);
+    mRemote = ip::udp::endpoint(ip::address::from_string(lIp.data()), lPort);
 
     try {
         mSocket.open(ip::udp::v4());
@@ -131,7 +132,7 @@ bool XLinkKaiConnection::ReadNextData()
     return lReturn;
 }
 
-void XLinkKaiConnection::ReceiveCallback(const boost::system::error_code& aError, size_t aBytesReceived)
+void XLinkKaiConnection::ReceiveCallback(const boost::system::error_code& /*aError*/, size_t aBytesReceived)
 {
     std::string lData{mData.begin(), mData.begin() + aBytesReceived};
 
@@ -142,9 +143,7 @@ void XLinkKaiConnection::ReceiveCallback(const boost::system::error_code& aError
         std::size_t lFirstSeparator{lData.find(cSeparator)};
         std::string lCommand{lData.substr(0, lFirstSeparator + 1)};
 
-        if (lCommand == std::string(cEthernetDataFormat) + cSeparator.data()) {
-            Logger::GetInstance().Log("Received: " + PrettyHexString(lData), Logger::Level::TRACE);
-        } else {
+        if (lCommand != std::string(cEthernetDataFormat) + cSeparator.data()) {
             Logger::GetInstance().Log("Received: " + lCommand + lData, Logger::Level::TRACE);
         }
 
@@ -166,12 +165,25 @@ void XLinkKaiConnection::ReceiveCallback(const boost::system::error_code& aError
                 // is e;e;
                 lCommand = lData.substr(0, cEthernetDataString.size());
 
+                Logger::GetInstance().Log("Received: " + PrettyHexString(lData.substr(cEthernetDataString.length())),
+                                          Logger::Level::TRACE);
+
                 if (lCommand == cEthernetDataString) {
                     if (mIncomingConnection != nullptr) {
                         // Strip e;e;
                         mEthernetData =
                             lData.substr(cEthernetDataString.length(), lData.length() - cEthernetDataString.length());
+
                         mIncomingConnection->Send(mEthernetData);
+                    }
+                } else if (lCommand == cEthernetDataMetaString) {
+                    if (lData.substr(cEthernetDataMetaString.length(), cSetESSIDFormat.length()) == cSetESSIDFormat) {
+                        Logger::GetInstance().Log(
+                            "XLink Kai gave us the following ESSID: " + lData.substr(cSetESSIDString.length()),
+                            Logger::Level::DEBUG);
+                    } else {
+                        Logger::GetInstance().Log(std::string("Unrecognized e;d message from XLink Kai: ") + lData,
+                                                  Logger::Level::DEBUG);
                     }
                 }
             } else if (lCommand == std::string(cDisconnectedFormat) + cSeparator.data()) {
@@ -198,7 +210,7 @@ bool XLinkKaiConnection::StartReceiverThread()
                 &XLinkKaiConnection::ReceiveCallback, this, placeholders::error, placeholders::bytes_transferred));
         // Run
         if (mReceiverThread == nullptr) {
-            mReceiverThread = std::make_shared<boost::thread>([&] {
+            mReceiverThread = std::make_shared<std::thread>([&] {
                 mIoService.restart();
                 while (!mIoService.stopped()) {
                     if ((!mConnected && !mConnectInitiated)) {
@@ -212,6 +224,7 @@ bool XLinkKaiConnection::StartReceiverThread()
                         Logger::GetInstance().Log("Timeout waiting for XLink Kai to connect", Logger::Level::ERROR);
                         mConnectInitiated = false;
                         mConnected        = false;
+                        mSettingsSent     = false;
                         // Retry in 10 seconds
                         std::this_thread::sleep_for(10s);
                     } else if (mConnected && !mConnectInitiated &&
@@ -221,6 +234,10 @@ bool XLinkKaiConnection::StartReceiverThread()
                                                   Logger::Level::ERROR);
                         mConnected        = false;
                         mConnectInitiated = false;
+                        mSettingsSent     = false;
+                    } else if (mConnected && !mConnectInitiated && !mSettingsSent) {
+                        Send(cSettingDDSOnlyString, "");
+                        mSettingsSent = true;
                     } else {
                         mIoService.poll();
                         // Very small delay to make the computer happy
@@ -264,8 +281,18 @@ void XLinkKaiConnection::Close(bool aKillThread)
             mSocket.close();
         }
     } catch (...) {
-        // std::cout << "Failed to disconnect :( " + boost::current_exception_diagnostic_information() << std::endl;
+        std::cout << "Failed to disconnect :( " + boost::current_exception_diagnostic_information() << std::endl;
     }
+}
+
+void XLinkKaiConnection::SetHosting(bool aHosting)
+{
+    mHosting = aHosting;
+}
+
+void XLinkKaiConnection::SetUseHostSSID(bool aUseHostSSID)
+{
+    mUseHostSSID = aUseHostSSID;
 }
 
 void XLinkKaiConnection::SetPort(unsigned int aPort)

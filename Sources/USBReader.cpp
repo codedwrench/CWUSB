@@ -8,12 +8,10 @@
 #include <cstring>
 #include <iostream>
 #include <string>
-#include <thread>
 #include <vector>
 
 // Not needed for this file but xlinkconnection needs it and this solves an ordering issue on windows
 #include <boost/asio.hpp>
-#include <boost/thread.hpp>
 #include <sys/types.h>
 
 // This garbage is needed for it to compile when building statically
@@ -130,12 +128,12 @@ void USBReader::HandleAsynchronous(AsyncCommand& aData, int aLength)
                             reinterpret_cast<AsyncSubHeader*>(reinterpret_cast<char*>(&aData) + cAsyncHeaderSize)->size;
 
                         lPacket.stitch    = lActualPacketLength > (cMaxUSBPacketSize - cAsyncHeaderAndSubHeaderSize);
-                        mActualLength = lActualPacketLength;
+                        mActualLength     = lActualPacketLength;
                         mReceiveStitching = lPacket.stitch;
 
                         // Skip headers already
                         lPacket.length = aLength - cAsyncHeaderAndSubHeaderSize;
-                        if(lPacket.stitch) {
+                        if (lPacket.stitch) {
                             mStitchingLength = lPacket.length;
                         }
 
@@ -166,15 +164,18 @@ void USBReader::HandleAsynchronous(AsyncCommand& aData, int aLength)
                     Logger::Level::DEBUG);
             }
         } else {
-            Logger::GetInstance().Log("RecStitch: Old: " + std::to_string(mStitchingLength) + " , Add: " + std::to_string(aLength - cAsyncHeaderSize) + " of: " + std::to_string(mActualLength), Logger::Level::TRACE);
-            
-            mStitchingLength  += aLength - cAsyncHeaderSize;
-            lPacket.stitch    = (aLength > (cMaxUSBPacketSize - cAsyncHeaderSize)) && (mStitchingLength < mActualLength);
+            Logger::GetInstance().Log("RecStitch: Old: " + std::to_string(mStitchingLength) +
+                                          " , Add: " + std::to_string(aLength - cAsyncHeaderSize) +
+                                          " of: " + std::to_string(mActualLength),
+                                      Logger::Level::TRACE);
+
+            mStitchingLength += aLength - cAsyncHeaderSize;
+            lPacket.stitch = (aLength > (cMaxUSBPacketSize - cAsyncHeaderSize)) && (mStitchingLength < mActualLength);
             mReceiveStitching = lPacket.stitch;
-            if(!lPacket.stitch) {
+            if (!lPacket.stitch) {
                 mStitchingLength = 0;
             }
-             
+
             // Skip headers already
             lPacket.length = aLength - cAsyncHeaderSize;
             memcpy(lPacket.data.data(), reinterpret_cast<char*>(&aData) + cAsyncHeaderSize, lPacket.length);
@@ -424,7 +425,7 @@ bool USBReader::StartReceiverThread()
         mUSBSendThread = std::make_shared<USBSendThread>(mMaxBufferedMessages);
         mUSBSendThread->StartThread();
 
-        mUSBThread = std::make_shared<boost::thread>([&] {
+        mUSBThread = std::make_shared<std::thread>([&] {
             // If we didn't get a graceful disconnect retry making connection.
             while ((mDeviceHandle != nullptr) || ((mRetryCounter > 0) && !mStopRequest)) {
                 if (mStopRequest) {

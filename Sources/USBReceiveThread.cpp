@@ -2,8 +2,6 @@
 
 /* Copyright (c) 2021 [Rick de Bondt] - USBReceiveThread.cpp */
 
-#include <boost/thread.hpp>
-
 #include "../Includes/Logger.h"
 #include "../Includes/XLinkKaiConnection.h"
 
@@ -17,7 +15,7 @@ bool USBReceiveThread::StartThread()
     if (mThread == nullptr) {
         mDone   = false;
         lReturn = true;
-        mThread = std::make_shared<boost::thread>([&] {
+        mThread = std::make_shared<std::thread>([&] {
             while (!mStopRequest) {
                 mMutex.lock();
                 if (!mQueue.empty()) {
@@ -49,7 +47,7 @@ bool USBReceiveThread::StartThread()
                         Logger::GetInstance().Log("Something went wrong while stitching. Dropping packet!",
                                                   Logger::Level::ERROR);
                         mLastReceivedMessage = {};
-                    // Check if we can send this off
+                        // Check if we can send this off
                     } else if (!lFrontOfQueue.stitch) {
                         mConnection.Send(
                             std::string_view(mLastReceivedMessage.data.data(), mLastReceivedMessage.length));

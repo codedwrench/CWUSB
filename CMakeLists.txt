@@ -54,9 +54,10 @@ if (MSVC OR MSYS OR MINGW)
         set(Boost_ARCHITECTURE "-x64")
     endif ()
 
-    set(BOOST_ROOT "e:/boost_1_75_0")
-    set(Boost_LIBRARY_DIR "e:/boost_1_75_0/stage/lib")
     if (NOT BUILD_STATIC)
+    	set(BOOST_ROOT "e:/boost_1_75_0")
+    	set(Boost_LIBRARY_DIR "e:/boost_1_75_0/stage/lib")
+	set(LIBUSB_DEPENDS_DIR "C:/libusb")
         # Magic that boost on windows seems to need.
         add_definitions( -DWIN32_LEAN_AND_MEAN )
         add_definitions( -DBOOST_ALL_NO_LIB )
@@ -66,7 +67,6 @@ if (MSVC OR MSYS OR MINGW)
     # The logger module uses ERROR in an enum class, GDI also uses this, but screw GDI
     # We have no GUI anyway!
     add_definitions( -DNOGDI )
-    set(LIBUSB_DEPENDS_DIR "C:/libusb")
     # Linux specific options
 else ()
     if(BUILD_DOC)
@@ -80,6 +80,11 @@ endif ()
 
 if (BUILD_STATIC)
     if (NOT MSVC OR MSYS OR MINGW)
+ 	if(MINGW)
+        	# Static link winpthread library
+		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-Bstatic,--whole-archive -lwinpthread -Wl,--no-whole-archive")
+	endif()
+
         message("Building statically, please set your paths to the correct ones")
         set(BOOST_ROOT "/home/codedwrench/src/boost")
         set(Boost_LIBRARY_DIR "/home/codedwrench/src/boost/stage/lib")
@@ -103,7 +108,7 @@ add_definitions(-DBOOST_ASIO_DISABLE_CONCEPTS)
 
 find_package(LibUSB REQUIRED)
 find_package(Threads REQUIRED)
-find_package(Boost 1.71 REQUIRED COMPONENTS chrono date_time atomic thread regex system program_options)
+find_package(Boost 1.71 REQUIRED COMPONENTS system)
 
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/PSPLinkBSD.txt
     DESTINATION ${CMAKE_CURRENT_BINARY_DIR})

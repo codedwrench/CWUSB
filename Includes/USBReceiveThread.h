@@ -7,13 +7,9 @@
 
 #include <memory>
 #include <mutex>
+#include <thread>
 
 #include "USBConstants.h"
-
-namespace boost
-{
-    class thread;
-}
 
 class XLinkKaiConnection;
 
@@ -61,5 +57,5 @@ private:
     std::mutex                                       mMutex{};
     std::queue<USB_Constants::BinaryStitchUSBPacket> mQueue{};
     bool                                             mStopRequest{false};
-    std::shared_ptr<boost::thread>                   mThread{nullptr};
+    std::shared_ptr<std::thread>                     mThread{nullptr};
 };

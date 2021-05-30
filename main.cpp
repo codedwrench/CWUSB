@@ -4,7 +4,6 @@
 #include <string_view>
 
 #include <boost/program_options.hpp>
-#include <boost/thread.hpp>
 
 #undef timeout
 
@@ -57,7 +56,7 @@ int main(int argc, char* argv[])
     boost::asio::io_service lSignalIoService{};
     boost::asio::signal_set lSignals(lSignalIoService, SIGINT, SIGTERM);
     lSignals.async_wait(&SignalHandler);
-    boost::thread lThread{[lIoService = &lSignalIoService] { lIoService->run(); }};
+    std::thread   lThread{[lIoService = &lSignalIoService] { lIoService->run(); }};
     SettingsModel mSettingsModel{};
     mSettingsModel.LoadFromFile(lProgramPath + cConfigFileName.data());
 

@@ -7,15 +7,11 @@
  * */
 
 #include <string>
+#include <thread>
 
 #include <boost/asio.hpp>
 
 #include "USBReader.h"
-
-namespace boost
-{
-    class thread;
-}
 
 namespace XLinkKai_Constants
 {
@@ -27,9 +23,13 @@ namespace XLinkKai_Constants
     static constexpr std::string_view     cConnectedFormat{"connected"};
     static constexpr std::string_view     cDisconnectFormat{"disconnect"};
     static constexpr std::string_view     cDisconnectedFormat{"disconnected"};
+    static constexpr std::string_view     cSetESSIDFormat{"setessid"};
     static constexpr std::string_view     cEthernetDataFormat{"e"};
-    static constexpr std::string_view     cLocallyUniqueName{"CWUSB"};
-    static constexpr std::string_view     cEmulatorName{"CWUSB_PSP"};
+    static constexpr std::string_view     cEthernetDataMetaFormat{"d"};
+    static constexpr std::string_view     cSettingFormat{"setting"};
+    static constexpr std::string_view     cSettingDDSOnly{"ddsonly"};
+    static constexpr std::string_view     cLocallyUniqueName{"XLHA_Device"};
+    static constexpr std::string_view     cEmulatorName{"XLHA"};
     static constexpr unsigned int         cPort{34523};
     static constexpr std::chrono::seconds cConnectionTimeout{10};
     static constexpr std::chrono::seconds cKeepAliveTimeout{60};
@@ -50,6 +50,14 @@ namespace XLinkKai_Constants
 
     static const std::string cEthernetDataString{std::string(cEthernetDataFormat) + cSeparator.data() +
                                                  cEthernetDataFormat.data() + cSeparator.data()};
+
+    static const std::string cEthernetDataMetaString{std::string(cEthernetDataFormat) + cSeparator.data() +
+                                                 cEthernetDataMetaFormat.data() + cSeparator.data()};
+
+    static const std::string cSettingDDSOnlyString{std::string(cSettingFormat) + cSeparator.data() +
+                                                   cSettingDDSOnly.data() + cSeparator.data() + "true"};
+
+    static const std::string cSetESSIDString(std::string(cEthernetDataMetaString.data()) + cSetESSIDFormat.data() + cSeparator.data());
 }  // namespace XLinkKai_Constants
 
 using namespace XLinkKai_Constants;
@@ -89,23 +97,28 @@ public:
 
     bool StartReceiverThread();
 
-    /**
-     * Sends a message to Xlink Kai.
-     * @param aCommand - Command that should be added to the XLink Kai message (for example connect).
-     * @param aData - Data to be sent to XLink Kai.
-     * @return True if successful.
-     */
     bool Send(std::string_view aCommand, std::string_view aData);
 
     bool Send(std::string_view aData);
 
     void Close();
-
     /**
      * Closes the connection.
      * @param aKillThread - set true if the receiver thread needs to be killed as well.
      */
     void Close(bool aKillThread);
+
+    /**
+     * Whether we are hosting a game or not.
+     * @param aHosting - Set to true if hosting.
+     */
+    void SetHosting(bool aHosting);
+
+    /**
+     * Whether or not the SSID from the host should be used in the rest of the program.
+     * @param aUseHostSSID - Set to true if host SSID should be used.
+     */
+    void SetUseHostSSID(bool aUseHostSSID);
 
     /**
      * Sets port to XLink Kai interface.
@@ -129,6 +142,7 @@ private:
 
     bool                                               mConnected{false};
     bool                                               mConnectInitiated{false};
+    bool                                               mSettingsSent{false};
     std::chrono::time_point<std::chrono::system_clock> mConnectionTimerStart{std::chrono::seconds{0}};
     std::chrono::time_point<std::chrono::system_clock> mKeepAliveTimerStart{std::chrono::seconds{0}};
 
@@ -139,7 +153,9 @@ private:
     std::string                    mIp{cIp};
     boost::asio::io_service        mIoService{};
     unsigned int                   mPort{cPort};
-    std::shared_ptr<boost::thread> mReceiverThread{nullptr};
+    bool                           mHosting{};
+    bool                           mUseHostSSID{};
+    std::shared_ptr<std::thread>   mReceiverThread{nullptr};
     boost::asio::ip::udp::endpoint mRemote{};
     boost::asio::ip::udp::socket   mSocket{mIoService};
 };

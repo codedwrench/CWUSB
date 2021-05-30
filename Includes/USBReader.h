@@ -10,15 +10,11 @@
 #include <iostream>
 #include <memory>
 #include <mutex>
+#include <thread>
 #include <queue>
 #include <string_view>
 
 #include "USBConstants.h"
-
-namespace boost
-{
-    class thread;
-}
 
 struct libusb_device_handle;
 class USBReceiveThread;
@@ -110,7 +106,7 @@ private:
     int                                 mLength{0};
     int                                 mActualLength{0};
     int                                 mStitchingLength{0};
-    std::shared_ptr<boost::thread>      mUSBThread{nullptr};
+    std::shared_ptr<std::thread>        mUSBThread{nullptr};
     std::shared_ptr<USBReceiveThread>   mUSBReceiveThread{nullptr};
     std::shared_ptr<USBSendThread>      mUSBSendThread{nullptr};
 

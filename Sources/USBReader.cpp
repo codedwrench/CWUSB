@@ -90,7 +90,7 @@ void USBReader::Close()
 {
     // Close thread nicely
     mStopRequest = true;
-    
+
     if (mUSBThread != nullptr) {
         while (mStopRequest && !mUSBThread->joinable()) {
             std::this_thread::sleep_for(1s);
@@ -130,10 +130,15 @@ void USBReader::HandleAsynchronous(AsyncCommand& aData, int aLength)
                             reinterpret_cast<AsyncSubHeader*>(reinterpret_cast<char*>(&aData) + cAsyncHeaderSize)->size;
 
                         lPacket.stitch    = lActualPacketLength > (cMaxUSBPacketSize - cAsyncHeaderAndSubHeaderSize);
+                        mActualLength = lActualPacketLength;
                         mReceiveStitching = lPacket.stitch;
 
                         // Skip headers already
                         lPacket.length = aLength - cAsyncHeaderAndSubHeaderSize;
+                        if(lPacket.stitch) {
+                            mStitchingLength = lPacket.length;
+                        }
+
                         memcpy(lPacket.data.data(),
                                reinterpret_cast<char*>(&aData) + cAsyncHeaderAndSubHeaderSize,
                                lPacket.length);
@@ -161,9 +166,15 @@ void USBReader::HandleAsynchronous(AsyncCommand& aData, int aLength)
                     Logger::Level::DEBUG);
             }
         } else {
-            lPacket.stitch    = aLength > (cMaxUSBPacketSize - cAsyncHeaderSize);
+            Logger::GetInstance().Log("RecStitch: Old: " + std::to_string(mStitchingLength) + " , Add: " + std::to_string(aLength - cAsyncHeaderSize) + " of: " + std::to_string(mActualLength), Logger::Level::TRACE);
+            
+            mStitchingLength  += aLength - cAsyncHeaderSize;
+            lPacket.stitch    = (aLength > (cMaxUSBPacketSize - cAsyncHeaderSize)) && (mStitchingLength < mActualLength);
             mReceiveStitching = lPacket.stitch;
-
+            if(!lPacket.stitch) {
+                mStitchingLength = 0;
+            }
+             
             // Skip headers already
             lPacket.length = aLength - cAsyncHeaderSize;
             memcpy(lPacket.data.data(), reinterpret_cast<char*>(&aData) + cAsyncHeaderSize, lPacket.length);
@@ -231,7 +242,7 @@ bool USBReader::Open()
 
     lAmountOfDevices = libusb_get_device_list(nullptr, &lDevices);
     if (lAmountOfDevices >= 0 && lDevices != nullptr) {
-        for(int lCount = 0; (lCount < lAmountOfDevices) && (mDeviceHandle == nullptr); lCount++) {
+        for (int lCount = 0; (lCount < lAmountOfDevices) && (mDeviceHandle == nullptr); lCount++) {
             lDevice = lDevices[lCount];
             libusb_device_descriptor lDescriptor{0};
             memset(&lDescriptor, 0, sizeof(lDescriptor));
@@ -415,7 +426,7 @@ bool USBReader::StartReceiverThread()
 
         mUSBThread = std::make_shared<boost::thread>([&] {
             // If we didn't get a graceful disconnect retry making connection.
-            while ((mDeviceHandle != nullptr) || mRetryCounter > 0) {
+            while ((mDeviceHandle != nullptr) || ((mRetryCounter > 0) && !mStopRequest)) {
                 if (mStopRequest) {
                     HandleClose();
                 } else {
@@ -435,7 +446,7 @@ bool USBReader::StartReceiverThread()
                         // First read, then write
                         int lLength{USBBulkRead(cUSBDataReadEndpoint, cMaxUSBPacketSize, mReadTimeoutMS)};
                         if (lLength > 0) {
-                            mLength = lLength;
+                            mLength       = lLength;
                             mRetryCounter = 0;
                             ReceiveCallback();
                         } else if (lLength == LIBUSB_ERROR_TIMEOUT || lLength == LIBUSB_ERROR_BUSY) {

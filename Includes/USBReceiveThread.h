@@ -58,7 +58,6 @@ private:
     bool                                             mDone{true};
     bool                                             mError{false};
     USB_Constants::BinaryStitchWiFiPacket            mLastReceivedMessage{};
-    USB_Constants::BinaryStitchWiFiPacket            mLastCompleteMessage{};
     std::mutex                                       mMutex{};
     std::queue<USB_Constants::BinaryStitchUSBPacket> mQueue{};
     bool                                             mStopRequest{false};

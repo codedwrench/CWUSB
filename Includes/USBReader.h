@@ -108,6 +108,8 @@ private:
     bool                                mError{false};
     std::shared_ptr<XLinkKaiConnection> mIncomingConnection{nullptr};
     int                                 mLength{0};
+    int                                 mActualLength{0};
+    int                                 mStitchingLength{0};
     std::shared_ptr<boost::thread>      mUSBThread{nullptr};
     std::shared_ptr<USBReceiveThread>   mUSBReceiveThread{nullptr};
     std::shared_ptr<USBSendThread>      mUSBSendThread{nullptr};

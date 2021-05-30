@@ -36,7 +36,6 @@ bool USBReceiveThread::StartThread()
 
                         mLastReceivedMessage.length += lFrontOfQueue.length;
                         mLastReceivedMessage.stitch = lFrontOfQueue.stitch;
-
                     } else {
                         // Replace last received since the previous one wasn't a stitch packet
                         memcpy(mLastReceivedMessage.data.data(), lFrontOfQueue.data.data(), lFrontOfQueue.length);
@@ -45,10 +44,16 @@ bool USBReceiveThread::StartThread()
                         mLastReceivedMessage.stitch = lFrontOfQueue.stitch;
                     }
 
-                    if (!lFrontOfQueue.stitch) {
-                        mLastCompleteMessage = mLastReceivedMessage;
+                    // Check if we should continue stitching
+                    if (mLastReceivedMessage.length > USB_Constants::cMaxAsynchronousBuffer) {
+                        Logger::GetInstance().Log("Something went wrong while stitching. Dropping packet!",
+                                                  Logger::Level::ERROR);
+                        mLastReceivedMessage = {};
+                    // Check if we can send this off
+                    } else if (!lFrontOfQueue.stitch) {
                         mConnection.Send(
                             std::string_view(mLastReceivedMessage.data.data(), mLastReceivedMessage.length));
+                        mLastReceivedMessage = {};
                     }
                 } else {
                     // Never forget to unlock a mutex
@@ -69,7 +74,7 @@ void USBReceiveThread::StopThread()
         std::this_thread::sleep_for(std::chrono::seconds(1));
     }
     ClearQueues();
-    
+
     if (mThread != nullptr && mThread->joinable()) {
         mThread->join();
     }
@@ -98,7 +103,6 @@ void USBReceiveThread::ClearQueues()
 {
     mMutex.lock();
     std::queue<USB_Constants::BinaryStitchUSBPacket>().swap(mQueue);
-    mLastCompleteMessage = {};
     mLastReceivedMessage = {};
     mMutex.unlock();
 }

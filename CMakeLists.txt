@@ -138,7 +138,7 @@ add_executable(cwusb main.cpp
 
 if (BUILD_STATIC)
 	if(NOT APPLE)
-		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libgcc -static-libstdc++")
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libgcc -static-libstdc++ -pthread")
 	else()
 		# Needed for libusb
 		set(CMAKE_CXX_FLAGS "-Wl,-framework,IOKit -Wl,-framework,CoreFoundation -lobjc ${CMAKE_CXX_FLAGS}")
